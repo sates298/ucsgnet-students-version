@@ -1,7 +1,7 @@
 #!/bin/bash
 
 WORKDIR=`pwd`
-MODULEDIR="${WORKDIR}/src/ucsgnet"
+MODULEDIR="${WORKDIR}/ucsgnet"
 
 echo ${PYTHONPATH}
 export PYTHONPATH=${PYTHONPATH}:${MODULEDIR}
