@@ -1,4 +1,5 @@
 import math
+import os
 import typing as t
 
 import cv2
@@ -196,3 +197,26 @@ class SimpleDataset(Dataset):
         self.__cache[index] = (image, coords, distances, bounding_volume)
 
         return image, coords, distances, bounding_volume
+
+# custom datasets
+
+class JPGDataset(SimpleDataset):
+    def __init__(
+        self,
+        root_path: str,
+        recursive: bool = False,
+        transforms: t.Optional[t.Callable[[np.ndarray], torch.Tensor]] = None,
+        verbose: bool = False
+    ):
+
+        paths = []
+        if recursive:
+            for root, subdirs, files in os.walk(root_path):
+                paths.extend(os.path.join(root, file) for file in files)
+        else:
+            paths = [os.path.join(root_path, f.name) for f in os.scandir(root_path) if f.is_file()]
+        super().__init__(
+            paths,
+            transforms=transforms,
+            verbose=verbose
+        )
