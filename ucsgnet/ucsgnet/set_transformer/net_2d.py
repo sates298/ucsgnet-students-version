@@ -16,7 +16,7 @@ from ucsgnet.ucsgnet.csg_layers import RelationLayer
 from ucsgnet.ucsgnet.extractors import Decoder, Extractor2D
 from ucsgnet.ucsgnet.losses import get_composite_loss
 from ucsgnet.ucsgnet.metrics import mse
-from ucsgnet.ucsgnet.model import CSGNet
+from ucsgnet.ucsgnet.set_transformer.model import SetCSGNet
 from ucsgnet.ucsgnet.shape_evaluators import create_compound_evaluator
 from ucsgnet.utils import get_simple_dataset_paths_from_config
 
@@ -25,7 +25,7 @@ class Net(pl.LightningModule):
     def __init__(self, hparams: argparse.Namespace):
         super().__init__()
         self.hparams = hparams
-        self.net = CSGNet(
+        self.net = SetCSGNet(
             Extractor2D(),
             Decoder(),
             create_compound_evaluator(
@@ -35,7 +35,6 @@ class Net(pl.LightningModule):
             ),
             self.hparams.shapes_per_type,
             self.hparams.out_shapes_per_layer,
-            self.hparams.weight_binarizing_threshold,
             self.hparams.num_csg_layers,
             self.hparams.image_size
         )
@@ -171,13 +170,6 @@ class Net(pl.LightningModule):
                     translation_vectors[..., 2].reshape((-1,)),
                     self.global_step,
                 )
-
-        for i, layer in enumerate(self.net.csg_layers_):  # type: RelationLayer
-            self.logger.log_histogram(
-                f"rel_layer_dist_temp_{i}/vals",
-                layer.temperature_.reshape((-1,)),
-                self.global_step,
-            )
 
         self.logger.log_histogram(
             "scaler/m", self.net.scaler_.m.reshape((-1,)), self.global_step

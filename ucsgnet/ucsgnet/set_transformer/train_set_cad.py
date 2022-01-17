@@ -1,6 +1,6 @@
 import argparse
 
-from ucsgnet.ucsgnet.cad.net_cad import Net
+from ucsgnet.ucsgnet.set_transformer.net_cad import Net
 from ucsgnet.ucsgnet.train_2d import training
 import matplotlib.pyplot as plt
 import cv2
@@ -43,15 +43,6 @@ def train(args: argparse.Namespace):
     model = Net(args)
     model.build(args.data_path)
 
-    # train_loader = model.train_dataloader()
-    # for (image, coords, distances, bounding_volume) in train_loader:
-    #     print(image.shape)
-    #     print(coords.shape)
-    #     print(distances.shape)
-    #     print(bounding_volume.shape)
-    #     break
-    #
-    # print("done")
     if args.checkpoint_path and len(args.checkpoint_path) > 0:
         print(f"Loading pretrained model from: {args.checkpoint_path}")
         model = model.load_from_checkpoint(args.checkpoint_path)
