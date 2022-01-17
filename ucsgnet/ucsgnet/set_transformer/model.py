@@ -50,7 +50,8 @@ class SetCSGNet(nn.Module):
                     num_in_shapes=in_shapes,
                     features_dim=self.features_size,
                     num_out_shapes=out_shapes,
-                    latent_size=extractor.out_features
+                    latent_size=extractor.out_features,
+                    hidden_dim=256,
                 )
             )
             in_shapes = out_shapes * 4 + self.num_output_shapes_from_evaluator

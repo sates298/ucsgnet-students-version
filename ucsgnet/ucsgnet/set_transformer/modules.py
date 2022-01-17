@@ -73,19 +73,21 @@ class SetCSGLayer(nn.Module):
                  num_in_shapes: int,
                  features_dim: int,
                  num_out_shapes: int,
-                 latent_size: int):
+                 latent_size: int,
+                 hidden_dim: int = 256):
         super().__init__()
+        self.heads_num = 1
         self.num_in_shapes = num_in_shapes
         self.num_out_shapes = num_out_shapes
         self.latent_size = latent_size
         self.features_dim = features_dim
 
-        self.encoder1 = MAB(latent_size, features_dim, features_dim, 1)
-        self.encoder2 = MAB(features_dim, features_dim, features_dim, 1)
+        self.encoder1 = MAB(latent_size, features_dim, hidden_dim, self.heads_num)
+        self.encoder2 = MAB(hidden_dim, hidden_dim, hidden_dim, self.heads_num)
 
-        self.decoder_pma = PMA(features_dim, 1, num_out_shapes)
-        self.decoder_head1 = MAB(features_dim, features_dim, features_dim, 1)
-        self.decoder_head2 = MAB(features_dim, features_dim, features_dim, 1)
+        self.decoder_pma = PMA(hidden_dim, 1, num_out_shapes)
+        self.decoder_head1 = MAB(hidden_dim, hidden_dim, features_dim, self.heads_num)
+        self.decoder_head2 = MAB(hidden_dim, hidden_dim, features_dim, self.heads_num)
 
         self.operations_before_clamping: t.Optional[torch.Tensor] = None
         self.operations_after_clamping: t.Optional[torch.Tensor] = None
