@@ -5,9 +5,11 @@ import typing as t
 import cv2
 import h5py
 import numpy as np
+import pandas as pd
 import torch
 from PIL import Image
-from torch.utils.data import Dataset
+import pytorch_lightning as pl
+from torch.utils.data import Dataset, DataLoader
 from torchvision.transforms import (
     Compose,
     Grayscale,
@@ -27,7 +29,7 @@ def get_simple_2d_transforms() -> t.Callable[
 
 class HdfsDataset3D(Dataset):
     def __init__(
-        self, path: str, points_per_sample: int, seed: int, size: int
+            self, path: str, points_per_sample: int, seed: int, size: int
     ):
         self.path = path
         self.points_per_sample = points_per_sample
@@ -62,22 +64,22 @@ class HdfsDataset3D(Dataset):
         z_min, z_max = min_coords[2], max_coords[2]
 
         bounding_dims = (
-            torch.tensor(
-                (z_max - z_min, y_max - y_min, x_max - x_min),
-                dtype=torch.float32,
-            )
-            + 0.5
-        ) / 256 - 0.5
+                                torch.tensor(
+                                    (z_max - z_min, y_max - y_min, x_max - x_min),
+                                    dtype=torch.float32,
+                                )
+                                + 0.5
+                        ) / 256 - 0.5
         bounding_vol = bounding_dims.prod()
 
         return vox, sampled_points, sampled_gt, bounding_vol
 
 
 def process_single_2d_image(
-    image: np.ndarray,
-    transforms: t.Optional[
-        t.Callable[[np.ndarray], t.Union[torch.Tensor, np.ndarray]]
-    ],
+        image: np.ndarray,
+        transforms: t.Optional[
+            t.Callable[[np.ndarray], t.Union[torch.Tensor, np.ndarray]]
+        ],
 ) -> t.Tuple[torch.Tensor, ...]:
     height, width = image.shape[0], image.shape[1]
     current_max_distance = max(width, height) * math.sqrt(2)
@@ -120,10 +122,10 @@ def process_single_2d_image(
 
 class CADDataset(Dataset):
     def __init__(
-        self,
-        h5_file_path: str,
-        data_split: Literal["train", "valid", "test"],
-        transforms: t.Optional[t.Callable[[np.ndarray], torch.Tensor]] = None,
+            self,
+            h5_file_path: str,
+            data_split: Literal["train", "valid", "test"],
+            transforms: t.Optional[t.Callable[[np.ndarray], torch.Tensor]] = None,
     ):
 
         super().__init__()
@@ -163,12 +165,12 @@ class CADDataset(Dataset):
 
 class SimpleDataset(Dataset):
     def __init__(
-        self,
-        image_paths: t.Sequence[str],
-        points_with_distances_paths: t.Optional[t.Sequence[str]],
-        points_per_sample: t.Optional[int],
-        transforms: t.Optional[t.Callable[[np.ndarray], torch.Tensor]] = None,
-        verbose: bool = False,
+            self,
+            image_paths: t.Sequence[str],
+            points_with_distances_paths: t.Optional[t.Sequence[str]],
+            points_per_sample: t.Optional[int],
+            transforms: t.Optional[t.Callable[[np.ndarray], torch.Tensor]] = None,
+            verbose: bool = False,
     ):
 
         super().__init__()
@@ -198,15 +200,16 @@ class SimpleDataset(Dataset):
 
         return image, coords, distances, bounding_volume
 
+
 # custom datasets
 
 class JPGDataset(SimpleDataset):
     def __init__(
-        self,
-        root_path: str,
-        recursive: bool = False,
-        transforms: t.Optional[t.Callable[[np.ndarray], torch.Tensor]] = None,
-        verbose: bool = False
+            self,
+            root_path: str,
+            recursive: bool = False,
+            transforms: t.Optional[t.Callable[[np.ndarray], torch.Tensor]] = None,
+            verbose: bool = False
     ):
 
         paths = []
@@ -220,3 +223,23 @@ class JPGDataset(SimpleDataset):
             transforms=transforms,
             verbose=verbose
         )
+
+
+class CSVDataset(Dataset):
+    def __init__(self, x_path, c_path=None):
+        self.x_df = pd.read_csv(x_path)
+        if c_path is not None:
+            self.c_df = pd.read_csv(c_path)
+
+    def __len__(self):
+        return len(self.x_df)
+
+    def __getitem__(self, index: int):
+        x = self.x_df.iloc[index, :].values
+        x = torch.tensor(x, dtype=torch.float)
+
+        if hasattr(self, 'c_df'):
+            c = self.c_df.iloc[index, :].values
+            c = torch.tensor(c, dtype=torch.float)
+            return x, c
+        return x
