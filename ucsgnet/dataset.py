@@ -237,7 +237,6 @@ class CSVDataset(Dataset):
     def __getitem__(self, index: int):
         x = self.x_df.iloc[index, :].values
         x = torch.tensor(x, dtype=torch.float)
-
         if hasattr(self, 'c_df'):
             c = self.c_df.iloc[index, :].values
             c = torch.tensor(c, dtype=torch.float)

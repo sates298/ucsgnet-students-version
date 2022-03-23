@@ -10,6 +10,8 @@ from nflows.transforms.coupling import (
     AffineCouplingTransform,
 )
 from nflows.transforms.normalization import BatchNorm
+from nflows.transforms.autoregressive import MaskedAffineAutoregressiveTransform
+from nflows.transforms.permutations import ReversePermutation
 
 
 class SimpleRealNVP(Flow):
@@ -55,6 +57,11 @@ class SimpleRealNVP(Flow):
             mask *= -1
             if batch_norm_between_layers:
                 layers.append(BatchNorm(features=features))
+
+        # layers = []
+        # for _ in range(num_layers):
+        #     layers.append(ReversePermutation(features=features))
+        #     layers.append(MaskedAffineAutoregressiveTransform(features=features, hidden_features=hidden_features))
 
         super().__init__(
             transform=CompositeTransform(layers),

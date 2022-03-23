@@ -7,23 +7,42 @@ from torch.utils.data import DataLoader
 from typing_extensions import Literal
 from collections import OrderedDict, defaultdict
 from ucsgnet.ucsgnet.net_2d import Net as Net2D
-from ucsgnet.dataset import CSVDataset
-
+from ucsgnet.dataset import CSVDataset, get_simple_2d_transforms, CADDataset
+from ucsgnet.flows.models import SimpleRealNVP
 from nflows.flows.base import Flow
 import numpy as np
 import os
+from ucsgnet.ucsgnet.cad.net_cad import Net
 
 
 class FlowNet(pl.LightningModule):
-    def __init__(self, model: Flow, hparams: argparse.Namespace):
+    def __init__(self, hparams: argparse.Namespace):
         super().__init__()
-        self.model = model
+        self.model = SimpleRealNVP(
+            features=256,
+            hidden_features=hparams.hidden_features,
+            context_features=None,
+            num_layers=4,
+            num_blocks_per_layer=2,
+            batch_norm_between_layers=hparams.batch_norm_between_layers,
+            batch_norm_within_layers=hparams.batch_norm_within_layers
+        )
         self.hparams = hparams
 
         (
             trainable_params_count,
             non_trainable_params_count,
         ) = self.num_of_parameters
+
+        self.net = Net.load_from_checkpoint(os.path.join("models",
+                                                    "cad_main",
+                                                    "initial",
+                                                    "ckpts",
+                                                    "model.ckpt"
+                                                    ))
+        self.net = self.net.eval()
+        self.net.freeze()
+
 
         print("Num of trainable params: {}".format(trainable_params_count))
         print(
@@ -50,21 +69,31 @@ class FlowNet(pl.LightningModule):
     def _dataloader(
             self, training: bool, split_type: Literal["train", "valid"], use_c: bool = False
     ) -> DataLoader:
+        # batch_size = self.hparams.batch_size
+        # c_path = None
+        # if split_type == "train":
+        #     x_path = os.path.join(self.data_path_, "training.csv")
+        #     if use_c:
+        #         c_path = os.path.join(self.data_path_, "training_c.csv")
+        # elif split_type == "valid":
+        #     x_path = os.path.join(self.data_path_, "validation.csv")
+        #     if use_c:
+        #         c_path = os.path.join(self.data_path_, "validation_c.csv")
+        # else:
+        #     raise Exception("Invalid split type")
+        #
+        # loader = DataLoader(
+        #     dataset=CSVDataset(x_path, c_path),
+        #     batch_size=batch_size,
+        #     shuffle=training,
+        #     drop_last=training,
+        #     num_workers=0,
+        # )
+        # return loader
         batch_size = self.hparams.batch_size
-        c_path = None
-        if split_type == "train":
-            x_path = os.path.join(self.data_path_, "training.csv")
-            if use_c:
-                c_path = os.path.join(self.data_path_, "training_c.csv")
-        elif split_type == "valid":
-            x_path = os.path.join(self.data_path_, "validation.csv")
-            if use_c:
-                c_path = os.path.join(self.data_path_, "validation_c.csv")
-        else:
-            raise Exception("Invalid split type")
-
+        transforms = get_simple_2d_transforms()
         loader = DataLoader(
-            dataset=CSVDataset(x_path, c_path),
+            dataset=CADDataset(self.data_path_, split_type, transforms),
             batch_size=batch_size,
             shuffle=training,
             drop_last=training,
@@ -86,7 +115,12 @@ class FlowNet(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         self.logger.train()
-        x = batch
+        # x = batch
+
+        image, points, trues, bounding_volume = batch
+        with torch.no_grad():
+            x = self.net.net.encoder_(image)
+
         loss = -self.model.log_prob(inputs=x).mean()
 
         tqdm_dict = {
@@ -105,7 +139,11 @@ class FlowNet(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         self.logger.valid()
-        x = batch
+        # x = batch
+        image, points, trues, bounding_volume = batch
+        with torch.no_grad():
+            x = self.net.net.encoder_(image)
+
         loss = -self.model.log_prob(inputs=x).mean()
 
         tqdm_dict = {
@@ -121,6 +159,25 @@ class FlowNet(pl.LightningModule):
         )
 
         return output
+
+    def validation_end(self, outputs):
+        self.logger.valid()
+        means = defaultdict(int)
+        for output in outputs:
+            for key, value in output["log"].items():
+                means[key] += value
+
+        means = {key: value / len(outputs) for key, value in means.items()}
+        logger_dict = means
+        tqdm_dict = {
+            "val_" + key: value.item() for key, value in means.items()
+        }
+        result = {
+            "val_loss": means["loss"],
+            "progress_bar": tqdm_dict,
+            "log": logger_dict,
+        }
+        return result
 
     def configure_optimizers(self):
         optimizer = optim.Adam(
@@ -147,4 +204,43 @@ class FlowNet(pl.LightningModule):
             "--batch_size", help="Batch size", type=int, default=32
         )
 
+        parser.add_argument(
+            "--use_patience", help="Use Patience", type=bool, default=True
+        )
+
+        parser.add_argument(
+            "--patience_epochs", help="Patience Epochs", type=int, default=50
+        )
+
+        parser.add_argument(
+            "--max_epochs",
+            type=int,
+            help="Maximum number of epochs",
+            default=1000,
+        )
+
+        parser.add_argument(
+            "--batch_norm_between_layers",
+            type=bool,
+            default=False
+        )
+
+        parser.add_argument(
+            "--batch_norm_within_layers",
+            type=bool,
+            default=False
+        )
+
+        parser.add_argument(
+            "--hidden_features",
+            type=int,
+            default=100
+        )
         return parser
+
+    # def __next_elem_from_loader(self, loader: DataLoader):
+    #     x = next(iter(loader))
+    #     if self.on_gpu:
+    #         x = x.cuda()
+    #     return x
+    #

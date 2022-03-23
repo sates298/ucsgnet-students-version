@@ -54,6 +54,7 @@ def get_args() -> argparse.Namespace:
         help="Name of the experiment",
         default="test",
     )
+
     parser = Net.add_model_specific_args(parser)
     return parser.parse_args()
 

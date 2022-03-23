@@ -108,6 +108,27 @@ class Net(pl.LightningModule):
             retain_latent_code=retain_latent_code,
         )
 
+    def forward_sampled(
+            self,
+            codes: torch.Tensor,
+            points: torch.Tensor,
+            *,
+            return_distances_to_base_shapes: bool = False,
+            return_intermediate_output_csg: bool = False,
+            return_scaled_distances_to_shapes: bool = False,
+            retain_latent_code: bool = False,
+            retain_shape_params: bool = False,
+    ) -> t.Union[torch.Tensor, t.Tuple[torch.Tensor, ...]]:
+        return self.net.forward_sampled(
+            codes,
+            points,
+            return_distances_to_base_shapes=return_distances_to_base_shapes,
+            return_intermediate_output_csg=return_intermediate_output_csg,
+            return_scaled_distances_to_shapes=return_scaled_distances_to_shapes,
+            retain_shape_params=retain_shape_params,
+            retain_latent_code=retain_latent_code,
+        )
+
     def training_step(
         self,
         batch: t.Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
