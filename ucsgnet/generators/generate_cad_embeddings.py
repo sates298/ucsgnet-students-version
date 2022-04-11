@@ -37,9 +37,10 @@ def get_args() -> argparse.Namespace:
 def generate_embeddings(encoder: torch.nn.Module, dataloader: DataLoader, out_dir: str):
     codes = []
     for image, _, _, _ in tqdm(dataloader):
-        code = encoder(image)
-        code = code.detach().cpu().numpy()
-        codes.extend(code)
+        with torch.no_grad():
+            code = encoder(image)
+            code = code.detach().cpu().numpy()
+            codes.extend(code)
 
     pd.DataFrame(codes).to_csv(out_dir, index=False)
 
@@ -58,8 +59,8 @@ def generate_embeddings_dataset(args: argparse.Namespace):
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
 
-    generate_embeddings(encoder, train_dataloader, os.path.join(data_dir, "training.csv"))
-    generate_embeddings(encoder, val_dataloader, os.path.join(data_dir, "validation.csv"))
+    generate_embeddings(encoder, train_dataloader, os.path.join(data_dir, "training3.csv"))
+    generate_embeddings(encoder, val_dataloader, os.path.join(data_dir, "validation3.csv"))
 
 
 if __name__ == "__main__":

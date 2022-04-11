@@ -69,37 +69,37 @@ class FlowNet(pl.LightningModule):
     def _dataloader(
             self, training: bool, split_type: Literal["train", "valid"], use_c: bool = False
     ) -> DataLoader:
-        # batch_size = self.hparams.batch_size
-        # c_path = None
-        # if split_type == "train":
-        #     x_path = os.path.join(self.data_path_, "training.csv")
-        #     if use_c:
-        #         c_path = os.path.join(self.data_path_, "training_c.csv")
-        # elif split_type == "valid":
-        #     x_path = os.path.join(self.data_path_, "validation.csv")
-        #     if use_c:
-        #         c_path = os.path.join(self.data_path_, "validation_c.csv")
-        # else:
-        #     raise Exception("Invalid split type")
-        #
-        # loader = DataLoader(
-        #     dataset=CSVDataset(x_path, c_path),
-        #     batch_size=batch_size,
-        #     shuffle=training,
-        #     drop_last=training,
-        #     num_workers=0,
-        # )
-        # return loader
         batch_size = self.hparams.batch_size
-        transforms = get_simple_2d_transforms()
+        c_path = None
+        if split_type == "train":
+            x_path = os.path.join(self.data_path_, "training2.csv")
+            if use_c:
+                c_path = os.path.join(self.data_path_, "training_c.csv")
+        elif split_type == "valid":
+            x_path = os.path.join(self.data_path_, "validation2.csv")
+            if use_c:
+                c_path = os.path.join(self.data_path_, "validation_c.csv")
+        else:
+            raise Exception("Invalid split type")
+
         loader = DataLoader(
-            dataset=CADDataset(self.data_path_, split_type, transforms),
+            dataset=CSVDataset(x_path, c_path),
             batch_size=batch_size,
             shuffle=training,
             drop_last=training,
             num_workers=0,
         )
         return loader
+        # batch_size = self.hparams.batch_size
+        # transforms = get_simple_2d_transforms()
+        # loader = DataLoader(
+        #     dataset=CADDataset(self.data_path_, split_type, transforms),
+        #     batch_size=batch_size,
+        #     shuffle=training,
+        #     drop_last=training,
+        #     num_workers=0,
+        # )
+        # return loader
 
     def train_dataloader(self) -> DataLoader:
         return self._dataloader(True, "train", False)
@@ -115,20 +115,21 @@ class FlowNet(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         self.logger.train()
-        # x = batch
+        x = batch
 
-        image, points, trues, bounding_volume = batch
-        with torch.no_grad():
-            x = self.net.net.encoder_(image)
+        # image, points, trues, bounding_volume = batch
+        # with torch.no_grad():
+        #     x = self.net.net.encoder_(image)
 
+        # x = x + self.params['noise'] * torch.rand_like(x)
         loss = -self.model.log_prob(inputs=x).mean()
 
         tqdm_dict = {
-            "train_loss": loss.item()
+            "train_loss": loss
         }
 
         logger_dict = {
-            "loss": loss.item()
+            "loss": loss
         }
 
         output = OrderedDict(
@@ -139,11 +140,12 @@ class FlowNet(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         self.logger.valid()
-        # x = batch
-        image, points, trues, bounding_volume = batch
-        with torch.no_grad():
-            x = self.net.net.encoder_(image)
+        x = batch
+        # image, points, trues, bounding_volume = batch
+        # with torch.no_grad():
+        #     x = self.net.net.encoder_(image)
 
+        # x = x + self.params['noise'] * torch.rand_like(x)
         loss = -self.model.log_prob(inputs=x).mean()
 
         tqdm_dict = {

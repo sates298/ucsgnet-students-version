@@ -17,7 +17,7 @@ def extract(path):
 def get_2d(path, name, dirpath):
     m = Mesh.from_file(os.path.join(path, name))
     fig = plt.figure(figsize=(8, 8), dpi=8)
-    ax = fig.gca(projection='3d')
+    ax = fig.gca(projection='shapenet')
     ax.add_collection3d(mplot3d.art3d.Poly3DCollection(m.vectors, color='white'))
     scale = m.points.flatten()
     ax.auto_scale_xyz(scale, scale, scale)

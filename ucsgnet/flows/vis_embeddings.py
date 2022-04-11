@@ -16,7 +16,7 @@ from ucsgnet.ucsgnet.cad.net_cad import Net
 from ucsgnet.flows.net_flow import FlowNet
 from sklearn.manifold import TSNE
 
-OUT_DIR = Path("paper-stuff/embedding_space")
+OUT_DIR = Path("paper-stuff/embedding_space/fixed_bug")
 OUT_DIR.mkdir(exist_ok=True)
 
 

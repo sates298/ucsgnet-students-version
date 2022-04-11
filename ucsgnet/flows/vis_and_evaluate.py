@@ -24,7 +24,7 @@ from ucsgnet.ucsgnet.visualize_2d_predicted_shapes import (
     visualize_cad_dataset,
 )
 
-OUT_DIR = Path("paper-stuff/flow-2d-shapes-visualization-flow14")
+OUT_DIR = Path("paper-stuff/flow-2d-shapes-visualization-flow")
 OUT_DIR.mkdir(exist_ok=True)
 
 ORIGINAL_WIDTH = 64

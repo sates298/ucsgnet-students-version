@@ -19,12 +19,86 @@ from torchvision.transforms import (
 from typing_extensions import Literal
 
 from ucsgnet.common import SEED
+import json
 
 
 def get_simple_2d_transforms() -> t.Callable[
     [t.Union[Image.Image, np.ndarray]], torch.Tensor
 ]:
     return Compose([Resize(64), Grayscale(), ToTensor()])
+
+
+class HdfsDataset3DCat(Dataset):
+    def __init__(
+            self, path: str, points_per_sample: int, seed: int, size: int, train: bool
+    ):
+        self.path = path
+        self.points_per_sample = points_per_sample
+        self.size = size
+
+        self._rng = np.random.RandomState(seed)
+        self.train = train
+
+        with open(os.path.join("data", "shapenet", "taxonomy.json")) as json_f:
+            self.taxonomy = json.loads(json_f.read())
+
+        self.cat_index_mapper = {}
+        self.cat_name_mapper = {}
+        counter = 0
+        for s_object in self.taxonomy:
+            self.cat_index_mapper[s_object["synsetId"]] = counter
+            self.cat_name_mapper[s_object["synsetId"]] = s_object["name"]
+            counter += 1
+
+        self.NUM_CLASSES = len(self.cat_index_mapper)
+
+        txt_file = "all_vox256_img_train.txt" if self.train else "all_vox256_img_test.txt"
+        with open(os.path.join("data", "hdf5", txt_file)) as f:
+            self.file_names = f.read().split("\n")
+
+    def __len__(self) -> int:
+        return 35019 if self.train else 8762  # training
+
+    def __getitem__(self, index: int) -> t.Tuple[torch.Tensor, ...]:
+        # vox = self._voxels[index].astype(np.float32)
+        # cube = self._values[index].astype(np.float32)
+        # points = self._points[index].astype(np.float32)
+
+        with h5py.File(self.path, "r") as h5_file:
+            vox = h5_file["voxels"][index].astype(np.float32)
+            cube = h5_file[f"values_{self.size}"][index].astype(np.float32)
+            points = h5_file[f"points_{self.size}"][index].astype(np.float32)
+
+        full_object_name = self.file_names[index]
+        cat_identifier = full_object_name.split("/")[0]
+        cat_index = self.cat_index_mapper[cat_identifier]
+
+        # context = torch.zeros(self.NUM_CLASSES)
+        # context[cat_index] = 1
+
+        vox = torch.from_numpy(vox.transpose((3, 0, 1, 2)))
+        sampled_gt = torch.from_numpy(cube)
+        sampled_points = torch.from_numpy((points + 0.5) / 256 - 0.5)
+
+        where_ones = sampled_points[sampled_gt[:, 0] == 1]
+
+        min_coords = where_ones.min(dim=0)[0]
+        max_coords = where_ones.max(dim=0)[0]
+
+        x_min, x_max = min_coords[0], max_coords[0]
+        y_min, y_max = min_coords[1], max_coords[1]
+        z_min, z_max = min_coords[2], max_coords[2]
+
+        bounding_dims = (
+                                torch.tensor(
+                                    (z_max - z_min, y_max - y_min, x_max - x_min),
+                                    dtype=torch.float32,
+                                )
+                                + 0.5
+                        ) / 256 - 0.5
+        bounding_vol = bounding_dims.prod()
+
+        return vox, cat_index, sampled_points, sampled_gt, bounding_vol
 
 
 class HdfsDataset3D(Dataset):
@@ -37,18 +111,25 @@ class HdfsDataset3D(Dataset):
 
         self._rng = np.random.RandomState(seed)
 
-        with h5py.File(self.path, "r") as h5_file:
-            self._voxels = h5_file["voxels"][:]
-            self._values = h5_file[f"values_{self.size}"][:]
-            self._points = h5_file[f"points_{self.size}"][:]
+        # with h5py.File(self.path, "r") as h5_file:
+        # self._voxels = h5_file["voxels"][:]
+        # self._values = h5_file[f"values_{self.size}"][:]
+        # self._points = h5_file[f"points_{self.size}"][:]
 
     def __len__(self) -> int:
-        return len(self._voxels)
+        # return 35019 # training
+        return 8762  # validation
+        # return len(self._voxels)
 
     def __getitem__(self, index: int) -> t.Tuple[torch.Tensor, ...]:
-        vox = self._voxels[index].astype(np.float32)
-        cube = self._values[index].astype(np.float32)
-        points = self._points[index].astype(np.float32)
+        # vox = self._voxels[index].astype(np.float32)
+        # cube = self._values[index].astype(np.float32)
+        # points = self._points[index].astype(np.float32)
+
+        with h5py.File(self.path, "r") as h5_file:
+            vox = h5_file["voxels"][index].astype(np.float32)
+            cube = h5_file[f"values_{self.size}"][index].astype(np.float32)
+            points = h5_file[f"points_{self.size}"][index].astype(np.float32)
 
         vox = torch.from_numpy(vox.transpose((3, 0, 1, 2)))
         sampled_gt = torch.from_numpy(cube)
@@ -226,10 +307,12 @@ class JPGDataset(SimpleDataset):
 
 
 class CSVDataset(Dataset):
-    def __init__(self, x_path, c_path=None):
+    def __init__(self, x_path, c_path=None, c_num=0):
         self.x_df = pd.read_csv(x_path)
         if c_path is not None:
             self.c_df = pd.read_csv(c_path)
+            self.mapping = {key: i for i, key in enumerate(self.c_df["0"].unique())}
+        self.c_num = c_num
 
     def __len__(self):
         return len(self.x_df)
@@ -239,6 +322,8 @@ class CSVDataset(Dataset):
         x = torch.tensor(x, dtype=torch.float)
         if hasattr(self, 'c_df'):
             c = self.c_df.iloc[index, :].values
-            c = torch.tensor(c, dtype=torch.float)
-            return x, c
+            index = self.mapping[c[0]]
+            context = torch.zeros(self.c_num)
+            context[index] = 1.0
+            return x, context
         return x

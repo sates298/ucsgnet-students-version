@@ -11,7 +11,7 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 
 from ucsgnet.common import TrainingStage
-from ucsgnet.dataset import HdfsDataset3D
+from ucsgnet.dataset import HdfsDataset3DCat
 from ucsgnet.ucsgnet.csg_layers import RelationLayer
 from ucsgnet.ucsgnet.extractors import Decoder, Extractor3D
 from ucsgnet.ucsgnet.losses import get_composite_loss
@@ -112,6 +112,27 @@ class Net(pl.LightningModule):
     ) -> t.Union[torch.Tensor, t.Tuple[torch.Tensor, ...]]:
         return self.net(
             images,
+            points,
+            return_distances_to_base_shapes=return_distances_to_base_shapes,
+            return_intermediate_output_csg=return_intermediate_output_csg,
+            return_scaled_distances_to_shapes=return_scaled_distances_to_shapes,
+            retain_shape_params=retain_shape_params,
+            retain_latent_code=retain_latent_code,
+        )
+
+    def forward_sampled(
+            self,
+            codes: torch.Tensor,
+            points: torch.Tensor,
+            *,
+            return_distances_to_base_shapes: bool = False,
+            return_intermediate_output_csg: bool = False,
+            return_scaled_distances_to_shapes: bool = False,
+            retain_latent_code: bool = False,
+            retain_shape_params: bool = False,
+    ) -> t.Union[torch.Tensor, t.Tuple[torch.Tensor, ...]]:
+        return self.net.forward_sampled(
+            codes,
             points,
             return_distances_to_base_shapes=return_distances_to_base_shapes,
             return_intermediate_output_csg=return_intermediate_output_csg,
@@ -332,7 +353,7 @@ class Net(pl.LightningModule):
         if self.current_data_size_ == 64:
             points_to_sample *= 4
         loader = DataLoader(
-            dataset=HdfsDataset3D(
+            dataset=HdfsDataset3DCat(
                 os.path.join(self.data_path_, a_file),
                 points_to_sample,
                 self.hparams.seed,
@@ -397,7 +418,7 @@ class Net(pl.LightningModule):
             default=0.99,
         )
         parser.add_argument(
-            "--batch_size", help="Batch size", type=int, default=16
+            "--batch_size", help="Batch size", type=int, default=64
         )
         parser.add_argument(
             "--out_shapes_per_layer",
