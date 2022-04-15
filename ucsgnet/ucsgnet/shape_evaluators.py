@@ -191,7 +191,6 @@ class SquareCubeEvaluator(ShapeEvaluator):
         self, parameters: torch.Tensor, points: torch.Tensor
     ) -> torch.Tensor:
         q_points = points.abs() - parameters.unsqueeze(dim=-2)
-        print('q_points', q_points)
 
         lengths = (q_points.max(torch.zeros_like(q_points))).norm(dim=-1)
         zeros_points = torch.zeros_like(lengths)
