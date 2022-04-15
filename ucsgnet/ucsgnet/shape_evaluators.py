@@ -35,6 +35,7 @@ class ShapeEvaluator(nn.Module):
             batch_size, self.num_of_shapes, -1
         )
         shape_params = all_parameters[:, :, : self.num_parameters]
+        
         translation = all_parameters[
             :,
             :,
@@ -43,6 +44,15 @@ class ShapeEvaluator(nn.Module):
         rotation = all_parameters[
             :, :, self.num_parameters + self.num_dimensions :
         ]
+        # print('shape all', all_parameters.shape)
+        # print('shape_params', shape_params)
+        # print('shape shape_params', shape_params.shape)
+        # print('unsqueeze', shape_params.unsqueeze(dim=-2).shape)
+        # print('unsqueeze', shape_params.unsqueeze(dim=-2))
+        # print('trans', translation)
+        # print('shape trans', translation.shape)
+        # print('rot', rotation)
+        # print('shape rot', rotation.shape)
 
         self._last_parameters = shape_params
         self._translation_vector_prediction = translation
@@ -130,6 +140,49 @@ class CircleSphereEvaluator(ShapeEvaluator):
             )
 
 
+class TriangleEvaluator(ShapeEvaluator):
+    def __init__(self, num_of_shapes: int, num_dimensions: int):
+        super().__init__(1, num_of_shapes, num_dimensions)
+
+    def evaluate_points(
+        self, parameters: torch.Tensor, points: torch.Tensor
+    ) -> torch.Tensor:
+        # compute SDF for triangle radius r
+        xs = points[..., 0]
+        ys = points[..., 1]
+        
+        # const float k = sqrt(3.0);
+        k = math.sqrt(3)
+        # p.x = abs(p.x) - r;
+        q_xs = xs.abs() - parameters
+        # p.y = p.y + r/k;
+        q_ys = ys + parameters/k
+        
+        # if( p.x+k*p.y>0.0 ) p=vec2(p.x-k*p.y,-k*p.x-p.y)/2.0;
+        q_points = torch.stack([q_xs, q_ys], dim=-1)
+        mask = q_points[...,0] + k*q_points[...,1] > 0
+        q_points[mask] = torch.matmul(q_points[mask], torch.tensor([[1.0, -k], [-k, -1.0]]))/2.0
+        # p.x -= clamp( p.x, -2.0*r, 0.0 );
+        q_xs = q_points[...,0]
+        q_xs -= q_xs.min(torch.zeros_like(q_xs)).max(torch.zeros_like(q_xs) + parameters*(-2.0))
+
+        q_points = torch.stack([q_xs, q_ys], dim=-1)
+        # -length(p)*sign(p.y);
+        lengths = q_points.norm(dim=-1)
+        return -lengths*torch.sign(q_ys)
+
+    def get_volume(self) -> t.Union[float, torch.Tensor]:
+        if self._last_parameters is None:
+            return 0.0
+
+        if self.num_dimensions == 2:
+            return self._last_parameters.pow(4) * math.sqrt(3) / 4.0
+        else:
+            raise ValueError(
+                f"Not supported num of dimensions: {self.num_dimensions}"
+            )
+
+
 class SquareCubeEvaluator(ShapeEvaluator):
     def __init__(self, num_of_shapes: int, num_dimensions: int):
         super().__init__(num_dimensions, num_of_shapes, num_dimensions)
@@ -138,6 +191,7 @@ class SquareCubeEvaluator(ShapeEvaluator):
         self, parameters: torch.Tensor, points: torch.Tensor
     ) -> torch.Tensor:
         q_points = points.abs() - parameters.unsqueeze(dim=-2)
+        print('q_points', q_points)
 
         lengths = (q_points.max(torch.zeros_like(q_points))).norm(dim=-1)
         zeros_points = torch.zeros_like(lengths)
@@ -278,5 +332,6 @@ def create_compound_evaluator(
         [
             CircleSphereEvaluator(shapes_per_type, num_dimensions),
             SquareCubeEvaluator(shapes_per_type, num_dimensions),
+            TriangleEvaluator(shapes_per_type, num_dimensions)
         ]
     )
