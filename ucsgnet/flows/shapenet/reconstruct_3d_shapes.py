@@ -595,6 +595,94 @@ class VoxelReconstructor:
             csg_path,
         )
 
+    def reconstruct_single_sampled_without_voxels(
+        self, samples: torch.Tensor
+    ) -> t.Tuple[
+        t.List[t.Tuple[np.ndarray, np.ndarray]],
+        t.List[np.ndarray],
+        t.List[t.List[t.Tuple[str, pymesh.Mesh]]],
+    ]:
+        pred_reconstructions = []
+        points_normals = []
+        csg_path = []
+        for sample in samples:
+            vox_pred = (
+                self.model.forward_sampled(sample[None], self.coords)
+                .detach()
+                .cpu()
+                .numpy()
+                .reshape((64, 64, 64))
+            )
+
+            params = [
+                (pair[0], pair[1].detach().cpu().numpy())
+                for pair in (
+                    self.model.net.evaluator_.get_all_last_predicted_parameters_of_shapes()
+                )
+            ]
+            trans = (
+                self.model.net.evaluator_.get_all_translation_vectors()
+                .detach()
+                .cpu()
+                .numpy()
+            )
+            rot = (
+                self.model.net.evaluator_.get_all_rotation_vectors()
+                .detach()
+                .cpu()
+                .numpy()
+            )
+            sampled_shapes = [
+                layer.last_sampled_shapes.detach().cpu().numpy()
+                for layer in self.model.net.csg_layers_
+            ]
+
+            # meshes
+            out_meshes = self.get_meshes_with_names(
+                params, trans, rot, sampled_shapes
+            )
+            csg_path.append(out_meshes)
+            if out_meshes[-1][1].vertices.shape[0] == 0:
+                vertices, triangles = mcubes.marching_cubes(vox_pred, 0.5)
+                vertices = (vertices - 0.5) / self.size - 0.5
+            else:
+                vertices, triangles = (
+                    out_meshes[-1][1].vertices,
+                    out_meshes[-1][1].faces,
+                )
+            pred_reconstructions.append((vertices, triangles))
+
+            # points
+            sampled_points_normals = sample_points_polygon(
+                vertices.astype(np.float32),
+                triangles.astype(np.int32),
+                vox_pred,
+                16000,
+            )
+            sampled_points_normals = torch.from_numpy(sampled_points_normals)
+            if torch.cuda.is_available():
+                sampled_points_normals = sampled_points_normals.cuda()
+
+            sample_points_value = self.model.forward_sampled(
+                sample[None], sampled_points_normals[None, :, :3]
+            ).reshape((1, -1, 1))
+
+            sampled_points_normals = (
+                sampled_points_normals[sample_points_value[0, :, 0] > 1e-4]
+                .detach()
+                .cpu()
+                .numpy()
+            )
+
+            np.random.shuffle(sampled_points_normals)
+            points_normals.append(sampled_points_normals[:4096])
+            self.model.net.clear_retained_codes_and_params()
+
+        return (
+            pred_reconstructions,
+            points_normals,
+            csg_path,
+        )
 
 def get_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(

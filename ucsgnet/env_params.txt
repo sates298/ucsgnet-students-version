@@ -1,0 +1,60 @@
+## GENERATE EMBEDDINGS
+--data_path data/cad/cad.h5 --weights_path  models/cad_main/initial/ckpts/model.ckpt  --out_dir data/cad_embeddings
+
+##TRAIN 2D
+
+--data_path data/cad_embeddings --experiment_name test_flow5 --batch_norm_within_layers True --batch_norm_between_layers True --batch_size 128
+
+
+--data_path data/cad_embeddings --experiment_name test_flow7 --batch_norm_within_layers False --batch_norm_between_layers True --batch_size 128
+
+
+## VIS 2D
+--data_path data/cad/cad.h5 --model_path models/cad_main/initial/ckpts/model.ckpt --flow_path models/test_flow5/initial/ckpts/model.ckpt
+
+
+--valid all_vox256_img_test.hdf5 --valid_shape_names all_vox256_img_test.txt --processed data/hdf5 --size 64 --weights_path models/3d_64/initial/ckpts/model.ckpt --sphere_complexity 3
+
+
+--valid_shapes_file data/hdf5/all_vox256_img_test.txt --ground_truth_folder data/pointcloud_surface --reconstruction_folder data/3d_reconstructions --out_dir data/3d_edge_data
+
+--in_folder data/3d_reconstructions --out_folder data/3d_renders --raw_folder data/shapenet
+
+
+### 3d Training
+
+--data_path data/shapenet_embeddings --experiment_name shapenet_test --lr 0.0001 --full_resolution_on --batch_norm_within_layers True --batch_norm_between_layers True --seed 0
+
+### 3d Training Cat
+ --data_path data/shapenet_cat_embeddings --experiment_name shapenet_cat_test --lr 0.0001 --full_resolution_on --batch_norm_within_layers True --batch_norm_between_layers True --seed 0
+
+
+
+## Embeddings 3D
+--train all_vox256_img_train.hdf5 --valid all_vox256_img_test.hdf5 --processed data/hdf5 --full_resolution_on  --seed 0 --out_dir data/shapenet_embeddings --weights_path  models/3d_64/initial/ckpts/model.ckpt
+
+## Embeddings 3D CAT
+--full_resolution_on  --seed 0 --out_dir data/shapenet_cat_embeddings --weights_path  models/3d_64/initial/ckpts/model.ckpt
+
+
+## VIS Embeddings 3D
+--data_path data/shapenet_embeddings --flow_path models/shapenet_test/initial/ckpts/model.ckpt
+
+## VIS Embeddings 3D CAT
+--data_path data/shapenet_cat_embeddings --flow_path models/shapenet_cat_test/initial/ckpts/model.ckpt
+
+
+
+## Reconstruct 3D
+ --valid all_vox256_img_test.hdf5 --valid_shape_names all_vox256_img_test.txt --processed data/hdf5 --size 64 --weights_path models/3d_64/initial/ckpts/model.ckpt --sphere_complexity 3 --flow_path models/shapenet_test/initial/ckpts/model.ckpt
+
+
+ ## VIS REC 3D
+--in_folder data/shapenet_reconstructions --out_folder data/3d_shapenet_renders --raw_folder data/shapenet
+
+ ## VIS REC CAT 3D
+--valid all_vox256_img_test.hdf5 --valid_shape_names all_vox256_img_test.txt --processed data/hdf5 --size 64  --sphere_complexity 3 --flow_path models/shapenet_cat_test/initial/ckpts/model.ckpt
+
+## EVAL 3D CAT
+--valid_shape_names_file data/hdf5/all_vox256_img_test.txt --rec_folder data/3d_shapenet_cat_renders_v2 --raw_shapenet_data_folder data/shapenet --ground_truth_point_surface data/pointcloud_surface  --out_folder paper-stuff/metrics/3d_cat_experiment --flow_path models/shapenet_cat_test/initial/ckpts/model.ckpt --size 64  --sphere_complexity 3
+
