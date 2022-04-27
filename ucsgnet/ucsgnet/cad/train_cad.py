@@ -1,10 +1,14 @@
 import argparse
 
+import sys
+sys.path.insert(0, '/home/steve/Dokumenty/Studia/project/ucsgnet-students-version')
+
 from ucsgnet.ucsgnet.cad.net_cad import Net
 from ucsgnet.ucsgnet.train_2d import training
 
 MAX_NB_EPOCHS = 170
-
+import torch
+torch.autograd.set_detect_anomaly(True)
 
 def get_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
