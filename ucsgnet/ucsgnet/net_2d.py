@@ -114,7 +114,7 @@ class Net(pl.LightningModule):
         batch_idx: int,
     ) -> t.Dict[str, t.Any]:
         self.logger.train()
-        image, points, trues, bounding_volume = batch
+        image, points, trues, bounding_volume, trues_primitives = batch
         predictions, distances_to_base_shapes, intermediate_results = self(
             image,
             points,
@@ -124,6 +124,7 @@ class Net(pl.LightningModule):
         total_loss, partial_losses_dict = get_composite_loss(
             predictions,
             trues,
+            trues_primitives,
             bounding_volume,
             points,
             intermediate_results,

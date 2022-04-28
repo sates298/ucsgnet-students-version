@@ -26,6 +26,7 @@ class ShapeEvaluator(nn.Module):
         self._translation_vector_prediction: t.Optional[torch.Tensor] = None
         self._rotation_vector_prediction: t.Optional[torch.Tensor] = None
         self._last_parameters: t.Optional[torch.Tensor] = None
+        self.scaled_shapes = None
 
     def forward(
         self, code: torch.Tensor, points: torch.Tensor

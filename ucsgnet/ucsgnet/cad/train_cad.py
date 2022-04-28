@@ -1,5 +1,7 @@
 import argparse
 
+
+
 from ucsgnet.ucsgnet.cad.net_cad import Net
 from ucsgnet.ucsgnet.train_2d import training
 
@@ -16,6 +18,13 @@ def get_args() -> argparse.Namespace:
         type=str,
         help="Path to h5 file containing data",
         required=True,
+    )
+    parser.add_argument(
+        "--labels_path",
+        dest="labels_path",
+        type=str,
+        help="Path to npy file containing labels to primitives",
+        default=True,
     )
     parser.add_argument(
         "--pretrained_path",

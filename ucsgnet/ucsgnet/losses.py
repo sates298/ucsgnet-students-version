@@ -26,6 +26,10 @@ def get_recon_loss(preds: torch.Tensor, trues: torch.Tensor) -> torch.Tensor:
     # input -> batch_size, num_points
     return F.mse_loss(preds, trues)
 
+def get_primitives_loss(scaler: Scaler, trues: torch.Tensor) -> torch.Tensor:
+    preds = scaler.scaled_shapes
+    return F.mse_loss(preds, trues)
+
 
 def get_scaling_loss(scaler: Scaler) -> torch.Tensor:
     return (scaler.m.abs().clamp_min(FLOAT_EPS) - FLOAT_EPS).sum()
@@ -56,6 +60,7 @@ def get_translation_loss(
 def get_composite_loss(
     preds: torch.Tensor,
     trues: torch.Tensor,
+    trues_primitives: torch.Tensor,
     max_volumes: torch.Tensor,
     points: torch.Tensor,
     intermediate_results: torch.Tensor,
@@ -74,6 +79,10 @@ def get_composite_loss(
     out = {"rec": recon_loss}
     total_loss += recon_loss
 
+    primitives_loss = get_primitives_loss(scaler, trues_primitives)
+    out = {"ps_rec": primitives_loss}
+    total_loss += primitives_loss
+    
     if scaler.m.item() <= 0.05:
         temp = 1e-1 * get_temperature_decreasing_loss(csg_layers)
         out["temp"] = temp

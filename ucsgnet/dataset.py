@@ -77,6 +77,7 @@ def process_single_2d_image(
     transforms: t.Optional[
         t.Callable[[np.ndarray], t.Union[torch.Tensor, np.ndarray]]
     ],
+    true_primitives: torch.Tensor = None,
 ) -> t.Tuple[torch.Tensor, ...]:
     height, width = image.shape[0], image.shape[1]
     current_max_distance = max(width, height) * math.sqrt(2)
@@ -114,7 +115,7 @@ def process_single_2d_image(
     coords = torch.from_numpy(coords).float()
 
     distances = (distances <= 0).astype(np.float32)
-    return image, coords, distances, bounding_volume
+    return image, coords, distances, bounding_volume, true_primitives
 
 
 class CADDataset(Dataset):
@@ -123,11 +124,13 @@ class CADDataset(Dataset):
         h5_file_path: str,
         data_split: Literal["train", "valid", "test"],
         transforms: t.Optional[t.Callable[[np.ndarray], torch.Tensor]] = None,
+        primitives_file_path: str = None,
     ):
 
         super().__init__()
 
         self.h5_file_path = h5_file_path
+        self.primitives_file_path = primitives_file_path
         self.transforms = transforms
         self.data_split = data_split
 
@@ -141,6 +144,10 @@ class CADDataset(Dataset):
         with h5py.File(self.h5_file_path, "r") as h5_file:
             self._images = h5_file[self.data_key][:]
 
+        self._trues_primitives = None
+        if self.primitives_file_path:
+            self._trues_primitives = torch.tensor(np.load(self.primitives_file_path))
+
         self.__cache = {}
 
     def __len__(self) -> int:
@@ -151,8 +158,12 @@ class CADDataset(Dataset):
             return self.__cache[index]
         image = self._images[index].astype(np.uint8) * 255
         image = np.expand_dims(image, axis=-1).repeat(3, axis=-1)
+        if self._trues_primitives is not None:
+            true_primitives = self._trues_primitives[index]
+        else:
+            true_primitives = None
         image, coords, distances, bounding_volume = process_single_2d_image(
-            image, self.transforms
+            image, self.transforms, true_primitives
         )
 
         self.__cache[index] = (image, coords, distances, bounding_volume)

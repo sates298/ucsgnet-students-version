@@ -6,8 +6,9 @@ from ucsgnet.dataset import CADDataset, get_simple_2d_transforms
 
 
 class Net(Net2D):
-    def build(self, data_path: str, **kwargs):
+    def build(self, data_path: str, labels_path:str, **kwargs):
         self.data_path_ = data_path
+        self.labels_path_ = labels_path
 
     def _dataloader(
         self, training: bool, split_type: Literal["train", "valid"]
@@ -15,7 +16,7 @@ class Net(Net2D):
         batch_size = self.hparams.batch_size
         transforms = get_simple_2d_transforms()
         loader = DataLoader(
-            dataset=CADDataset(self.data_path_, split_type, transforms),
+            dataset=CADDataset(self.data_path_, split_type, transforms, self.labels_path_),
             batch_size=batch_size,
             shuffle=training,
             drop_last=training,
