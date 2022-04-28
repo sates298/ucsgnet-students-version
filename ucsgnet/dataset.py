@@ -77,7 +77,6 @@ def process_single_2d_image(
     transforms: t.Optional[
         t.Callable[[np.ndarray], t.Union[torch.Tensor, np.ndarray]]
     ],
-    true_primitives: torch.Tensor = None,
 ) -> t.Tuple[torch.Tensor, ...]:
     height, width = image.shape[0], image.shape[1]
     current_max_distance = max(width, height) * math.sqrt(2)
@@ -115,7 +114,7 @@ def process_single_2d_image(
     coords = torch.from_numpy(coords).float()
 
     distances = (distances <= 0).astype(np.float32)
-    return image, coords, distances, bounding_volume, true_primitives
+    return image, coords, distances, bounding_volume
 
 
 class CADDataset(Dataset):
@@ -163,12 +162,12 @@ class CADDataset(Dataset):
         else:
             true_primitives = None
         image, coords, distances, bounding_volume = process_single_2d_image(
-            image, self.transforms, true_primitives
+            image, self.transforms
         )
 
         self.__cache[index] = (image, coords, distances, bounding_volume)
 
-        return image, coords, distances, bounding_volume
+        return image, coords, distances, bounding_volume, true_primitives
 
 
 class SimpleDataset(Dataset):

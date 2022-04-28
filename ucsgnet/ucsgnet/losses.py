@@ -28,6 +28,8 @@ def get_recon_loss(preds: torch.Tensor, trues: torch.Tensor) -> torch.Tensor:
 
 def get_primitives_loss(scaler: Scaler, trues: torch.Tensor) -> torch.Tensor:
     preds = scaler.scaled_shapes
+    print(preds.shape)
+    print(trues.shape)
     return F.mse_loss(preds, trues)
 
 

@@ -2,6 +2,9 @@ import argparse
 import json
 import os
 
+import sys
+sys.path.insert(0, '/home/steve/Dokumenty/Studia/project/ucsgnet-students-version')
+
 import pytorch_lightning as pl
 import torch
 from pytorch_lightning import Trainer

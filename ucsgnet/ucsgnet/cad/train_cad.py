@@ -1,6 +1,7 @@
 import argparse
 
-
+import sys
+sys.path.insert(0, '/home/steve/Dokumenty/Studia/project/ucsgnet-students-version')
 
 from ucsgnet.ucsgnet.cad.net_cad import Net
 from ucsgnet.ucsgnet.train_2d import training
@@ -24,7 +25,7 @@ def get_args() -> argparse.Namespace:
         dest="labels_path",
         type=str,
         help="Path to npy file containing labels to primitives",
-        default=True,
+        required=True,
     )
     parser.add_argument(
         "--pretrained_path",
@@ -48,7 +49,7 @@ def get_args() -> argparse.Namespace:
 
 def train(args: argparse.Namespace):
     model = Net(args)
-    model.build(args.data_path)
+    model.build(args.data_path, args.labels_path)
 
     if args.checkpoint_path and len(args.checkpoint_path) > 0:
         print(f"Loading pretrained model from: {args.checkpoint_path}")

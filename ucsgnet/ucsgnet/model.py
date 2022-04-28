@@ -189,6 +189,7 @@ class CSGNet(nn.Module):
             )  # -> batch, num_points, num_shapes
 
         scaled_shapes = 1 - self.scaler_(base_shapes)
+        self.scaler_.scaled_shapes = scaled_shapes
         last_distances = scaled_shapes
         partial_distances = [last_distances]
 

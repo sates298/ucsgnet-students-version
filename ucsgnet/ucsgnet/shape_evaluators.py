@@ -164,12 +164,12 @@ class TriangleEvaluator(ShapeEvaluator):
         mask = q_points[...,0] + k*q_points[...,1] > 0
         q_points[mask] = torch.matmul(q_points[mask], torch.tensor([[1.0, -k], [-k, -1.0]]))/2.0
         # p.x -= clamp( p.x, -2.0*r, 0.0 );
-        q_xs = q_points[...,0]
-        q_xs -= q_xs.min(torch.zeros_like(q_xs)).max(torch.zeros_like(q_xs) + parameters*(-2.0))
+        q_xs1 = q_points[...,0]
+        q_xs2 = q_xs1 - q_xs1.min(torch.zeros_like(q_xs1)).max(torch.zeros_like(q_xs1) + parameters*(-2.0))
 
-        q_points = torch.stack([q_xs, q_ys], dim=-1)
+        q_points2 = torch.stack([q_xs2, q_ys], dim=-1)
         # -length(p)*sign(p.y);
-        lengths = q_points.norm(dim=-1)
+        lengths = q_points2.norm(dim=-1)
         return -lengths*torch.sign(q_ys)
 
     def get_volume(self) -> t.Union[float, torch.Tensor]:
@@ -332,6 +332,6 @@ def create_compound_evaluator(
         [
             CircleSphereEvaluator(shapes_per_type, num_dimensions),
             SquareCubeEvaluator(shapes_per_type, num_dimensions),
-            TriangleEvaluator(shapes_per_type, num_dimensions)
+            TriangleEvaluator(shapes_per_type, num_dimensions),
         ]
     )
