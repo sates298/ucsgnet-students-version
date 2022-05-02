@@ -118,15 +118,13 @@ class CSGNet(nn.Module):
             points = points.unsqueeze(
                 dim=1
             )  # broadcasting for different of shapes
-
             base_shapes = self.evaluator_(
                 shape_params, points
             )  # -> batch, num_shapes, num_points
-
             base_shapes = base_shapes.permute(
                 (0, 2, 1)
             )  # -> batch, num_points, num_shapes
-
+        
         scaled_shapes = 1 - self.scaler_(base_shapes)
         self.scaler_.scaled_shapes = scaled_shapes
         last_distances = scaled_shapes

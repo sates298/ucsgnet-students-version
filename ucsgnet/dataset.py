@@ -129,7 +129,7 @@ class CADDataset(Dataset):
         super().__init__()
 
         self.h5_file_path = h5_file_path
-        self.primitives_file_path = primitives_file_path
+        self.h5_labels_file_path = primitives_file_path
         self.transforms = transforms
         self.data_split = data_split
 
@@ -143,9 +143,11 @@ class CADDataset(Dataset):
         with h5py.File(self.h5_file_path, "r") as h5_file:
             self._images = h5_file[self.data_key][:]
 
-        self._trues_primitives = None
-        if self.primitives_file_path:
-            self._trues_primitives = torch.tensor(np.load(self.primitives_file_path))
+        self._true_primitives = None
+        if self.h5_labels_file_path:
+            self.labels_key = self.data_key.replace('_images', '')
+            with h5py.File(self.h5_labels_file_path, "r") as h5_file:
+                self._true_primitives = torch.tensor(h5_file[self.labels_key][:])
 
         self.__cache = {}
 
@@ -157,8 +159,8 @@ class CADDataset(Dataset):
             return self.__cache[index]
         image = self._images[index].astype(np.uint8) * 255
         image = np.expand_dims(image, axis=-1).repeat(3, axis=-1)
-        if self._trues_primitives is not None:
-            true_primitives = self._trues_primitives[index]
+        if self._true_primitives is not None:
+            true_primitives = self._true_primitives[index]
         else:
             true_primitives = None
         image, coords, distances, bounding_volume = process_single_2d_image(

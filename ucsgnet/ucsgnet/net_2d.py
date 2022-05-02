@@ -110,11 +110,11 @@ class Net(pl.LightningModule):
 
     def training_step(
         self,
-        batch: t.Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
+        batch: t.Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
         batch_idx: int,
     ) -> t.Dict[str, t.Any]:
         self.logger.train()
-        image, points, trues, bounding_volume, trues_primitives = batch
+        image, points, trues, bounding_volume, true_primitives = batch
         predictions, distances_to_base_shapes, intermediate_results = self(
             image,
             points,
@@ -124,7 +124,7 @@ class Net(pl.LightningModule):
         total_loss, partial_losses_dict = get_composite_loss(
             predictions,
             trues,
-            trues_primitives,
+            true_primitives,
             bounding_volume,
             points,
             intermediate_results,

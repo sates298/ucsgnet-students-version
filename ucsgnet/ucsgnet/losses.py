@@ -28,8 +28,11 @@ def get_recon_loss(preds: torch.Tensor, trues: torch.Tensor) -> torch.Tensor:
 
 def get_primitives_loss(scaler: Scaler, trues: torch.Tensor) -> torch.Tensor:
     preds = scaler.scaled_shapes
-    print(preds.shape)
-    print(trues.shape)
+    # print(preds.shape)
+    trues = trues.permute(
+        (0, 2, 1)
+    )
+    # print(trues.shape)
     return F.mse_loss(preds, trues)
 
 
@@ -62,7 +65,7 @@ def get_translation_loss(
 def get_composite_loss(
     preds: torch.Tensor,
     trues: torch.Tensor,
-    trues_primitives: torch.Tensor,
+    true_primitives: torch.Tensor,
     max_volumes: torch.Tensor,
     points: torch.Tensor,
     intermediate_results: torch.Tensor,
@@ -81,8 +84,8 @@ def get_composite_loss(
     out = {"rec": recon_loss}
     total_loss += recon_loss
 
-    primitives_loss = get_primitives_loss(scaler, trues_primitives)
-    out = {"ps_rec": primitives_loss}
+    primitives_loss = get_primitives_loss(scaler, true_primitives)
+    out["ps_rec"] = primitives_loss
     total_loss += primitives_loss
     
     if scaler.m.item() <= 0.05:

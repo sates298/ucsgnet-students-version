@@ -24,7 +24,7 @@ def get_args() -> argparse.Namespace:
         "--labels_path",
         dest="labels_path",
         type=str,
-        help="Path to npy file containing labels to primitives",
+        help="Path to h5 file containing labels",
         required=True,
     )
     parser.add_argument(
