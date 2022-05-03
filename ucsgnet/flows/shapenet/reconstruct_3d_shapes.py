@@ -6,7 +6,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Tuple, Union, Any
 
 import mcubes
 import numpy as np
@@ -495,6 +495,21 @@ class VoxelReconstructor:
             points_normals,
             csg_path,
         )
+
+    def reconstruct_single_gt_mesh(
+        self, voxels: torch.Tensor
+    ) -> List[Tuple[Union[float, Any], Any]]:
+        true_reconstructions = []
+        for vox in voxels:
+            vox_numpy = vox.detach().cpu().numpy().reshape((64, 64, 64))
+            true_vertices, true_triangles = mcubes.marching_cubes(
+                vox_numpy, 0.5
+            )
+            true_vertices = (true_vertices - 0.5) / self.size - 0.5
+            true_reconstructions.append((true_vertices, true_triangles))
+
+        return true_reconstructions
+
 
     def reconstruct_single_sampled(
         self, voxels: torch.Tensor, samples: torch.Tensor

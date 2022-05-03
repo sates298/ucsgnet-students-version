@@ -5,6 +5,8 @@ from pathlib import Path
 import numpy as np
 import torch
 from plyfile import PlyData
+import open3d as o3d
+import trimesh
 
 
 # methods below are blatantly copied from
@@ -12,7 +14,7 @@ from plyfile import PlyData
 
 
 def get_simple_dataset_paths_from_config(
-    processed_data_path: str, split_config_path: str
+        processed_data_path: str, split_config_path: str
 ) -> t.List[str]:
     with open(split_config_path) as f:
         config = json.load(f)
@@ -24,7 +26,7 @@ def get_simple_dataset_paths_from_config(
 
 
 def write_ply_point_normal(
-    name: str, vertices: np.ndarray, normals: t.Optional[np.ndarray] = None
+        name: str, vertices: np.ndarray, normals: t.Optional[np.ndarray] = None
 ):
     fout = open(name, "w")
     fout.write("ply\n")
@@ -164,7 +166,7 @@ def quat_to_rot_matrix_numpy(quaternions: np.ndarray) -> np.ndarray:
 
 
 def read_point_normal_ply_file(
-    shape_file: str,
+        shape_file: str,
 ) -> t.Tuple[np.ndarray, np.ndarray]:
     file = open(shape_file, "r")
     lines = file.readlines()
@@ -231,3 +233,10 @@ def ply2obj(ply_path: str, obj_path: str):
                     # f.write(" %d" % tuple(ii) )
                     f.write(" %d/%d/%d" % tuple(ii))
                 f.write("\n")
+
+
+def convert_to_o3d_mesh(vertices, triangles):
+    o3dvert = o3d.utility.Vector3dVector(np.asarray(vertices))
+    o3dtriangles = o3d.utility.Vector3iVector(np.asarray(triangles))
+    o3mesh = o3d.geometry.TriangleMesh(vertices=o3dvert, triangles=o3dtriangles)
+    return o3mesh

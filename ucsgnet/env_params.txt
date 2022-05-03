@@ -56,5 +56,11 @@
 --valid all_vox256_img_test.hdf5 --valid_shape_names all_vox256_img_test.txt --processed data/hdf5 --size 64  --sphere_complexity 3 --flow_path models/shapenet_cat_test/initial/ckpts/model.ckpt
 
 ## EVAL 3D CAT
---valid_shape_names_file data/hdf5/all_vox256_img_test.txt --rec_folder data/3d_shapenet_cat_renders_v2 --raw_shapenet_data_folder data/shapenet --ground_truth_point_surface data/pointcloud_surface  --out_folder paper-stuff/metrics/3d_cat_experiment --flow_path models/shapenet_cat_test/initial/ckpts/model.ckpt --size 64  --sphere_complexity 3
+--synsetId 02691156 --gt_folder shapenet_15k_pointclouds --sample_folder shapenet_15k_pointclouds_samples --out_folder paper_stuff/metrics/3d_cat_experiment
 
+## GEN 15K PC
+--valid all_vox256_img_test.hdf5 --valid_shape_names all_vox256_img_test.txt --processed data/hdf5 --size 64 --sphere_complexity 3 --weights_path models/3d_64/initial/ckpts/model.ckpt
+
+
+## GEN 15K PC SAMPLES
+--valid all_vox256_img_test.hdf5 --valid_shape_names all_vox256_img_test.txt --processed data/hdf5 --size 64 --sphere_complexity 3 --flow_path models/shapenet_cat_test/initial/ckpts/model.ckpt --out_folder shapenet_15k_pointclouds_samples

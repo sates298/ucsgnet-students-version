@@ -358,6 +358,7 @@ class Net(pl.LightningModule):
                 points_to_sample,
                 self.hparams.seed,
                 size=self.current_data_size_,
+                train=training
             ),
             batch_size=batch_size,
             shuffle=training,
