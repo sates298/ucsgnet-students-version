@@ -161,7 +161,7 @@ class TriangleEvaluator(ShapeEvaluator):
         # if( p.x+k*p.y>0.0 ) p=vec2(p.x-k*p.y,-k*p.x-p.y)/2.0;
         q_points = torch.stack([q_xs, q_ys], dim=-1)
         mask = q_points[...,0] + k*q_points[...,1] > 0
-        q_points[mask] = torch.matmul(q_points[mask], torch.tensor([[1.0, -k], [-k, -1.0]]))/2.0
+        q_points[mask] = torch.matmul(q_points[mask], torch.tensor([[1.0, -k], [-k, -1.0]]).cuda())/2.0
         # p.x -= clamp( p.x, -2.0*r, 0.0 );
         q_xs1 = q_points[...,0]
         q_xs2 = q_xs1 - q_xs1.min(torch.zeros_like(q_xs1)).max(torch.zeros_like(q_xs1) + parameters*(-2.0))
