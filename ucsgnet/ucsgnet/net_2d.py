@@ -317,20 +317,22 @@ class Net(pl.LightningModule):
     def __next_elem_from_loader(
         self, loader: DataLoader
     ) -> t.Tuple[torch.Tensor, ...]:
-        images, coords, distances, _ = next(iter(loader))
+        images, coords, distances, _, true_primitives = next(iter(loader))
         if self.on_gpu:
             images = images.cuda()
             coords = coords.cuda()
             distances = distances.cuda()
-        return images, coords, distances
+            true_primitives = true_primitives.cuda()
+        return images, coords, distances, true_primitives
 
     def on_epoch_end(self):
         val_loader = self.val_dataloader()
-        (images, coords, distances) = self.__next_elem_from_loader(val_loader)
+        (images, coords, distances, true_primitives) = self.__next_elem_from_loader(val_loader)
 
         images = images[:16]
         coords = coords[:16]
         distances = distances[:16]
+        true_primitives = true_primitives[:16]
 
         b, c, h, w = images.shape
         final_predictions = self(images, coords).reshape((b, c, h, w))
@@ -339,6 +341,7 @@ class Net(pl.LightningModule):
         gt = torchvision.utils.make_grid(
             distances.view_as(images), normalize=True
         )
+        # gt_primitives = 
         pred_grid = torchvision.utils.make_grid(
             final_predictions, normalize=True
         )

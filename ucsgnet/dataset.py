@@ -167,7 +167,7 @@ class CADDataset(Dataset):
             image, self.transforms
         )
 
-        self.__cache[index] = (image, coords, distances, bounding_volume)
+        self.__cache[index] = (image, coords, distances, bounding_volume, true_primitives)
 
         return image, coords, distances, bounding_volume, true_primitives
 
