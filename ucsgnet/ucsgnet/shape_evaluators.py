@@ -176,7 +176,93 @@ class TriangleEvaluator(ShapeEvaluator):
             return 0.0
 
         if self.num_dimensions == 2:
-            return self._last_parameters.pow(4) * math.sqrt(3) / 4.0
+            return (self._last_parameters*math.sqrt(3)/2).pow(4) * math.sqrt(3) / 4.0
+        else:
+            raise ValueError(
+                f"Not supported num of dimensions: {self.num_dimensions}"
+            )
+
+
+class NormalTriangleEvaluator(ShapeEvaluator):
+    def __init__(self, num_of_shapes: int, num_dimensions: int):
+        num_params = 6 if num_dimensions == 2 else 1
+        super().__init__(num_params, num_of_shapes, num_dimensions)
+
+    def evaluate_points(
+        self, parameters: torch.Tensor, points: torch.Tensor
+    ) -> torch.Tensor:
+        p0 = parameters[...,:2].unsqueeze(2).expand(points.shape)
+        p1 = parameters[...,2:4].unsqueeze(2).expand(points.shape)
+        p2 = parameters[...,4:6].unsqueeze(2).expand(points.shape)
+
+        # vec2 e0 = p1 - p0;
+        # vec2 e1 = p2 - p1;
+        # vec2 e2 = p0 - p2;
+        # prevents future nan's if two points would be the same
+        tmpe0 = p1 - p0
+        maske0 = tmpe0.pow(2).sum(dim=-1) == 0
+        e0 = tmpe0.clone()
+        e0[maske0] = torch.tensor([1., 1.]).cuda()
+
+        tmpe1 = p2 - p1
+        maske1 = tmpe1.pow(2).sum(dim=-1) == 0
+        e1 = tmpe1.clone()
+        e1[maske1] = torch.tensor([1., 1.]).cuda()
+
+        tmpe2 = p0 - p2
+        maske2 = tmpe2.pow(2).sum(dim=-1) == 0
+        e2 = tmpe2.clone()
+        e2[maske2] = torch.tensor([1., 1.]).cuda()
+
+        # vec2 v0 = p - p0;
+        # vec2 v1 = p - p1;
+        # vec2 v2 = p - p2;
+        v0 = points - p0
+        v1 = points - p1
+        v2 = points - p2
+
+        # vec2 pq0 = v0 - e0*clamp( dot(v0,e0)/dot(e0,e0), 0.0, 1.0 );
+        # vec2 pq1 = v1 - e1*clamp( dot(v1,e1)/dot(e1,e1), 0.0, 1.0 );
+        # vec2 pq2 = v2 - e2*clamp( dot(v2,e2)/dot(e2,e2), 0.0, 1.0 );
+        pq0 = v0 - e0*((v0*e0).sum(dim=-1)/(e0*e0).sum(dim=-1)).clamp(0., 1.).unsqueeze(3).expand(e0.shape)
+        pq1 = v1 - e1*((v1*e1).sum(dim=-1)/(e1*e1).sum(dim=-1)).clamp(0., 1.).unsqueeze(3).expand(e1.shape)
+        pq2 = v2 - e2*((v2*e2).sum(dim=-1)/(e2*e2).sum(dim=-1)).clamp(0., 1.).unsqueeze(3).expand(e2.shape)
+
+        # float s = e0.x*e2.y - e0.y*e2.x;
+        s = e0[...,0]*e2[...,1] - e0[...,1]*e2[...,0]
+
+        # vec2 d = min( min( vec2(dot(pq0, pq0), s*(v0.x*e0.y-v0.y*e0.x)),
+        #                    vec2(dot( pq1, pq1 ),s*(v1.x*e1.y-v1.y*e1.x))),
+        #               vec2( dot( pq2, pq2 ), s*(v2.x*e2.y-v2.y*e2.x) ));
+        ve0 = (v0[...,0]*e0[...,1]-v0[...,1]*e0[...,0])
+        pqs0 = (pq0*pq0).sum(dim=-1)
+        f0 = torch.stack((pqs0, s*ve0), dim=-1)
+
+        ve1 = (v1[...,0]*e1[...,1]-v1[...,1]*e1[...,0])
+        pqs1 = (pq1*pq1).sum(dim=-1)
+        f1 = torch.stack((pqs1, s*ve1), dim=-1)
+
+        ve2 = (v2[...,0]*e2[...,1]-v2[...,1]*e2[...,0])
+        pqs2 = (pq2*pq2).sum(dim=-1)
+        f2 = torch.stack((pqs2, (s*ve2)), dim=-1)
+
+        d = torch.minimum(torch.minimum(f0, f1), f2)
+
+        # return -sqrt(d.x)*sign(d.y);
+        result = -torch.sqrt(d[...,0])*torch.sign(d[...,1]) 
+        return result
+
+    def get_volume(self) -> t.Union[float, torch.Tensor]:
+        if self._last_parameters is None:
+            return 0.0
+
+        if self.num_dimensions == 2:
+            a = self._last_parameters[...,:2]
+            b = self._last_parameters[...,2:4]
+            c = self._last_parameters[...,4:]
+            # Ax(By - Cy) + Bx(Cy - Ay) + Cx(Ay - By)
+            area = a[...,0]*(b[...,1] - c[...,1]) + b[...,0]*(c[...,1] - a[...,1]) + c[...,0]*(a[...,1]-b[...,1])
+            return area
         else:
             raise ValueError(
                 f"Not supported num of dimensions: {self.num_dimensions}"
@@ -201,7 +287,8 @@ class SquareCubeEvaluator(ShapeEvaluator):
             filling = ys.max(zs).max(xs).min(zeros_points)
         else:
             filling = ys.max(xs).min(zeros_points)
-        return lengths + filling
+        result = lengths + filling
+        return result
 
     def get_volume(self) -> t.Union[float, torch.Tensor]:
         return self._last_parameters.prod(dim=-1)
