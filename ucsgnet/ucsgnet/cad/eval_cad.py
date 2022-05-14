@@ -3,6 +3,8 @@ import json
 import math
 import os
 import typing as t
+import sys
+sys.path.insert(0, '/home/steve/Dokumenty/Studia/project/ucsgnet-students-version')
 
 import torch
 import tqdm
@@ -64,7 +66,14 @@ def evaluate(args: argparse.Namespace):
         net = net.cuda()
     val_dataloader = net.val_dataloader()
 
-    metrics = eval_on_single_loader(net, val_dataloader, "valid")
+    train_dataloader = net.train_dataloader()
+    test_dataloader = net.test_dataloader()
+
+    metrics = eval_on_single_loader(net, train_dataloader, "train")
+    metrics_val = eval_on_single_loader(net, val_dataloader, "valid")
+    metrics_test = eval_on_single_loader(net, test_dataloader, "test")
+    metrics.update(metrics_val)
+    metrics.update(metrics_test)
     metrics_path = args.out_dir
     if not os.path.exists(metrics_path):
         os.makedirs(metrics_path)

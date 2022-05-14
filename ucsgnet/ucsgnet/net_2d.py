@@ -121,6 +121,7 @@ class Net(pl.LightningModule):
             return_distances_to_base_shapes=True,
             return_intermediate_output_csg=True,
         )
+
         total_loss, partial_losses_dict = get_composite_loss(
             predictions,
             trues,
@@ -228,6 +229,7 @@ class Net(pl.LightningModule):
             return_distances_to_base_shapes=True,
             return_intermediate_output_csg=True,
         )
+
         total_loss, partial_losses_dict = get_composite_loss(
             predictions,
             trues,
