@@ -58,7 +58,7 @@ def eval_on_single_loader(
 
 def evaluate(args: argparse.Namespace):
     net = Net.load_from_checkpoint(args.weights_path)
-    net.build(args.data_path)
+    net.build(args.data_path, args.labels_path)
     net = net.eval()
     net.freeze()
     net.switch_mode(TrainingStage.FINE_TUNING)
@@ -103,6 +103,13 @@ def main():
         "--out_dir",
         type=str,
         help="Output directory for metrics",
+        required=True,
+    )
+    parser.add_argument(
+        "--labels_path",
+        dest="labels_path",
+        type=str,
+        help="Path to h5 file containing labels",
         required=True,
     )
     args = parser.parse_args()
