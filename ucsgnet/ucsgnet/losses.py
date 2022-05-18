@@ -84,7 +84,7 @@ def get_composite_loss(
     out = {"rec": recon_loss}
     total_loss += recon_loss
 
-    primitives_loss = get_primitives_loss(scaler, true_primitives)
+    primitives_loss = 1e-1 * get_primitives_loss(scaler, true_primitives)
     out["ps_rec"] = primitives_loss
     total_loss += primitives_loss
     
