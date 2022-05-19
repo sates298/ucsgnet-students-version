@@ -8,7 +8,7 @@ import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 from collections import OrderedDict, defaultdict
 from ucsgnet.dataset import HdfsDataset3DCat, CSVDataset
-from ucsgnet.flows.models import SimpleRealNVP
+from ucsgnet.flows.models import SimpleRealNVP, MaskedAutoregressiveFlow
 import numpy as np
 import os
 from ucsgnet.ucsgnet.net_3d import Net
@@ -16,7 +16,7 @@ from sklearn.metrics import accuracy_score
 
 
 class FlowNet3d(pl.LightningModule):
-    def __init__(self, hparams: argparse.Namespace):
+    def __init__(self, hparams: argparse.Namespace, use_autoregressive=False):
         super().__init__()
         self.train_file_: t.Optional[str] = None
         self.valid_file_: t.Optional[str] = None
@@ -24,15 +24,27 @@ class FlowNet3d(pl.LightningModule):
         self.current_data_size_: t.Optional[int] = None
         self.num_classes = 13
 
-        self.model = SimpleRealNVP(
-            features=256,
-            hidden_features=hparams.hidden_features,
-            context_features=self.num_classes,
-            num_layers=4,
-            num_blocks_per_layer=2,
-            batch_norm_within_layers=hparams.batch_norm_within_layers,
-            batch_norm_between_layers=hparams.batch_norm_between_layers
-        )
+        if use_autoregressive:
+            self.model = MaskedAutoregressiveFlow(
+                features=256,
+                hidden_features=hparams.hidden_features,
+                context_features=self.num_classes,
+                num_layers=5,
+                num_blocks_per_layer=2,
+                batch_norm_between_layers=hparams.batch_norm_between_layers,
+                batch_norm_within_layers=hparams.batch_norm_within_layers,
+                use_random_permutations=True
+            )
+        else:
+            self.model = SimpleRealNVP(
+                features=256,
+                hidden_features=hparams.hidden_features,
+                context_features=self.num_classes,
+                num_layers=5,
+                num_blocks_per_layer=2,
+                batch_norm_within_layers=hparams.batch_norm_within_layers,
+                batch_norm_between_layers=hparams.batch_norm_between_layers
+            )
 
         self.hparams = hparams
 
@@ -298,7 +310,7 @@ class FlowNet3d(pl.LightningModule):
         parser.add_argument(
             "--hidden_features",
             type=int,
-            default=100
+            default=220
         )
 
         parser.add_argument(
@@ -311,6 +323,14 @@ class FlowNet3d(pl.LightningModule):
         parser.add_argument(
             "--noise",
             type=float,
-            default=0.0
+            default=0.001
         )
         return parser
+
+
+class FlowNet3dMAF(FlowNet3d):
+    def forward(self, x, c):
+        return self.model.log_prob(inputs=x, context=c)
+
+    def __init__(self, hparams: argparse.Namespace):
+        super().__init__(hparams, use_autoregressive=True)

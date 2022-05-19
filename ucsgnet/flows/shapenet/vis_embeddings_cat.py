@@ -6,11 +6,9 @@ import seaborn as sns
 import umap
 import numpy as np
 import tqdm
-from ucsgnet.flows.shapenet.net_flow3d_cat import FlowNet3d
+from ucsgnet.flows.shapenet.net_flow3d_cat import FlowNet3dMAF
 from sklearn.manifold import TSNE
 
-OUT_DIR = Path("paper-stuff/embedding_space/shapenet_cat")
-OUT_DIR.mkdir(exist_ok=True)
 
 
 def parse_args():
@@ -26,6 +24,12 @@ def parse_args():
 
     parser.add_argument(
         "--flow_path",
+        type=str,
+        required=True
+    )
+
+    parser.add_argument(
+        "--out_folder",
         type=str,
         required=True
     )
@@ -64,7 +68,7 @@ def create_embeddings(flow, loader):
     return codes, samples, categories
 
 
-def run_umap(codes, samples, categories, split_type):
+def run_umap(codes, samples, categories, split_type, OUT_DIR):
     reducer = umap.UMAP(random_state=42)
     print(f"[UMAP] Projecting embeddings... - {split_type}")
     embeddings_umap = reducer.fit_transform(codes)
@@ -77,7 +81,7 @@ def run_umap(codes, samples, categories, split_type):
     save_plots(embeddings_samples_umap, categories, os.path.join(umap_dir, "samples.png"))
 
 
-def run_tsne(codes, samples, categories, split_type):
+def run_tsne(codes, samples, categories, split_type, OUT_DIR):
     print(f"[TSNE] Projecting embeddings... - {split_type}")
     tsne = TSNE(n_components=2, verbose=1, random_state=42)
     embeddings_tsne = tsne.fit_transform(codes)
@@ -92,21 +96,26 @@ def run_tsne(codes, samples, categories, split_type):
 
 
 def vis_embeddings(args):
-    flow = FlowNet3d.load_from_checkpoint(args.flow_path)
+    flow = FlowNet3dMAF.load_from_checkpoint(args.flow_path)
     flow.build(args.data_path)
+    flow.hparams.batch_size = 8
     flow = flow.eval()
 
     train_loader = flow.train_dataloader()
     val_loader = flow.val_dataloader()
 
+    OUT_DIR = Path("paper-stuff/embedding_space")
+    OUT_DIR = OUT_DIR / args.out_folder
+    OUT_DIR.mkdir(exist_ok=True)
+
     # train_codes, train_samples, train_categories = create_embeddings(flow, train_loader)
     val_codes, val_samples, val_categories = create_embeddings(flow, val_loader)
 
     # run_umap(train_codes, train_samples, train_categories, "train")
-    run_umap(val_codes, val_samples, val_categories, "val")
+    run_umap(val_codes, val_samples, val_categories, "val", OUT_DIR)
 
     # run_tsne(train_codes, train_samples, train_categories, "train")
-    run_tsne(val_codes, val_samples, val_categories, "val")
+    run_tsne(val_codes, val_samples, val_categories, "val", OUT_DIR)
 
 
 if __name__ == "__main__":

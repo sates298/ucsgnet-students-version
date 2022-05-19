@@ -26,8 +26,10 @@
 --data_path data/shapenet_embeddings --experiment_name shapenet_test --lr 0.0001 --full_resolution_on --batch_norm_within_layers True --batch_norm_between_layers True --seed 0
 
 ### 3d Training Cat
- --data_path data/shapenet_cat_embeddings --experiment_name shapenet_cat_test --lr 0.0001 --full_resolution_on --batch_norm_within_layers True --batch_norm_between_layers True --seed 0
-
+## REALNVP
+ --data_path data/shapenet_cat_embeddings --experiment_name shapenet_cat_test_realnvp --lr 0.001 --full_resolution_on --batch_norm_within_layers True --batch_norm_between_layers True --seed 0
+## MAF
+--data_path data/shapenet_cat_embeddings --experiment_name shapenet_cat_test_maf2 --lr 0.001 --full_resolution_on --seed 0
 
 
 ## Embeddings 3D
@@ -41,9 +43,10 @@
 --data_path data/shapenet_embeddings --flow_path models/shapenet_test/initial/ckpts/model.ckpt
 
 ## VIS Embeddings 3D CAT
+# REALNVP
 --data_path data/shapenet_cat_embeddings --flow_path models/shapenet_cat_test/initial/ckpts/model.ckpt
-
-
+#MAF
+--data_path data/shapenet_cat_embeddings --flow_path models/shapenet_cat_test_maf3/initial/ckpts/model.ckpt --out_folder maf
 
 ## Reconstruct 3D
  --valid all_vox256_img_test.hdf5 --valid_shape_names all_vox256_img_test.txt --processed data/hdf5 --size 64 --weights_path models/3d_64/initial/ckpts/model.ckpt --sphere_complexity 3 --flow_path models/shapenet_test/initial/ckpts/model.ckpt
@@ -56,11 +59,19 @@
 --valid all_vox256_img_test.hdf5 --valid_shape_names all_vox256_img_test.txt --processed data/hdf5 --size 64  --sphere_complexity 3 --flow_path models/shapenet_cat_test/initial/ckpts/model.ckpt
 
 ## EVAL 3D CAT
---synsetId 02691156 --gt_folder shapenet_15k_pointclouds --sample_folder shapenet_15k_pointclouds_samples --out_folder paper_stuff/metrics/3d_cat_experiment
+# REALNVP
+--synsetId 02691156 --gt_folder shapenet_15k_pointclouds --sample_folder shapenet_15k_pointclouds_samples --out_folder paper-stuff/metrics/3d_cat_experiment
+#MAF
+--synsetId 02691156 --gt_folder shapenet_15k_pointclouds --sample_folder shapenet_15k_pointclouds_samples_maf --out_folder paper-stuff/metrics/3d_cat_experiment_maf
+
 
 ## GEN 15K PC
 --valid all_vox256_img_test.hdf5 --valid_shape_names all_vox256_img_test.txt --processed data/hdf5 --size 64 --sphere_complexity 3 --weights_path models/3d_64/initial/ckpts/model.ckpt
 
 
 ## GEN 15K PC SAMPLES
+# REALNVP
 --valid all_vox256_img_test.hdf5 --valid_shape_names all_vox256_img_test.txt --processed data/hdf5 --size 64 --sphere_complexity 3 --flow_path models/shapenet_cat_test/initial/ckpts/model.ckpt --out_folder shapenet_15k_pointclouds_samples
+
+#MAF
+--valid all_vox256_img_test.hdf5 --valid_shape_names all_vox256_img_test.txt --processed data/hdf5 --size 64 --sphere_complexity 3 --flow_path models/shapenet_cat_test_maf3/initial/ckpts/model.ckpt --out_folder shapenet_15k_pointclouds_samples_maf

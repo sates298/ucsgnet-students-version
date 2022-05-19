@@ -11,7 +11,7 @@ from nflows.transforms.coupling import (
 )
 from nflows.transforms.normalization import BatchNorm
 from nflows.transforms.autoregressive import MaskedAffineAutoregressiveTransform
-from nflows.transforms.permutations import ReversePermutation
+from nflows.transforms.permutations import ReversePermutation, RandomPermutation
 
 
 class SimpleRealNVP(Flow):
@@ -66,4 +66,55 @@ class SimpleRealNVP(Flow):
         super().__init__(
             transform=CompositeTransform(layers),
             distribution=StandardNormal([features])
+        )
+
+
+class MaskedAutoregressiveFlow(Flow):
+    def __init__(
+            self,
+            features,
+            hidden_features,
+            context_features=None,
+            embedding_features=None,
+            num_layers=4,
+            num_blocks_per_layer=2,
+            use_residual_blocks=True,
+            use_random_masks=False,
+            use_random_permutations=False,
+            activation=F.relu,
+            dropout_probability=0.0,
+            batch_norm_within_layers=False,
+            batch_norm_between_layers=False,
+    ):
+
+        if use_random_permutations:
+            permutation_constructor = RandomPermutation
+        else:
+            permutation_constructor = ReversePermutation
+
+        layers = []
+        for _ in range(num_layers):
+            layers.append(permutation_constructor(features))
+            layers.append(
+                MaskedAffineAutoregressiveTransform(
+                    features=features,
+                    hidden_features=hidden_features,
+                    context_features=context_features if embedding_features is None else embedding_features,
+                    num_blocks=num_blocks_per_layer,
+                    use_residual_blocks=use_residual_blocks,
+                    random_mask=use_random_masks,
+                    activation=activation,
+                    dropout_probability=dropout_probability,
+                    use_batch_norm=batch_norm_within_layers,
+                )
+            )
+            if batch_norm_between_layers:
+                layers.append(BatchNorm(features))
+
+        embedding_net = torch.nn.Identity() if embedding_features is None else torch.nn.Linear(context_features, embedding_features)
+
+        super().__init__(
+            transform=CompositeTransform(layers),
+            distribution=StandardNormal([features]),
+            embedding_net=embedding_net
         )

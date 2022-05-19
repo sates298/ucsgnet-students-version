@@ -48,17 +48,17 @@ def chamf_dist(
 
 
 def cd_cpu(sample, ref):
-    # x, y = sample, ref
-    # bs, num_points, points_dim = x.size()
-    # xx = torch.bmm(x, x.transpose(2, 1))
-    # yy = torch.bmm(y, y.transpose(2, 1))
-    # zz = torch.bmm(x, y.transpose(2, 1))
-    # diag_ind = torch.arange(0, num_points).to(sample).long()
-    # rx = xx[:, diag_ind, diag_ind].unsqueeze(1).expand_as(xx)
-    # ry = yy[:, diag_ind, diag_ind].unsqueeze(1).expand_as(yy)
-    # P = (rx.transpose(2, 1) + ry - 2 * zz)
-    # return P.min(1)[0], P.min(2)[0]
-    return chamf_dist(ref, sample)
+    x, y = sample, ref
+    bs, num_points, points_dim = x.size()
+    xx = torch.bmm(x, x.transpose(2, 1))
+    yy = torch.bmm(y, y.transpose(2, 1))
+    zz = torch.bmm(x, y.transpose(2, 1))
+    diag_ind = torch.arange(0, num_points).to(sample).long()
+    rx = xx[:, diag_ind, diag_ind].unsqueeze(1).expand_as(xx)
+    ry = yy[:, diag_ind, diag_ind].unsqueeze(1).expand_as(yy)
+    P = (rx.transpose(2, 1) + ry - 2 * zz)
+    return P.min(1)[0], P.min(2)[0]
+    # return chamf_dist(ref, sample)
 
 
 def _pairwise_cd(sample_pcs, ref_pcs, batch_size=16):
@@ -77,10 +77,10 @@ def _pairwise_cd(sample_pcs, ref_pcs, batch_size=16):
             batch_size_ref = ref_batch.size(0)
             sample_batch_exp = sample_batch.view(1, -1, 3).expand(batch_size_ref, -1, -1)
             sample_batch_exp = sample_batch_exp.contiguous()
-            # dl, dr = cd_cpu(sample_batch_exp, ref_batch)
-            # cd_list.append((dl.mean(dim=1) + dr.mean(dim=1)).view(1, -1))
-            cd = cd_cpu(sample_batch_exp, ref_batch)
-            cd_list.append(cd)
+            dl, dr = cd_cpu(sample_batch_exp, ref_batch)
+            cd_list.append((dl.mean(dim=1) + dr.mean(dim=1)).view(1, -1))
+            # cd = cd_cpu(sample_batch_exp, ref_batch)
+            # cd_list.append(cd)
         cd_list = torch.cat(cd_list, dim=1)
         all_cd.append(cd_list)
     all_cd = torch.cat(all_cd, dim=0)
@@ -114,6 +114,8 @@ def main():
     gt_path = gt_folder / synsetId
     for gt_file in os.listdir(gt_path):
         gt_pc = np.load(gt_path / gt_file)
+        idx = np.random.randint(gt_pc.shape[0], size=2048)
+        gt_pc = gt_pc[idx,:]
         gt_pcs.append(gt_pc)
     gt_pcs = np.asarray(gt_pcs)
 
@@ -121,18 +123,20 @@ def main():
     s_path = samples_folder / synsetId
     for s_file in os.listdir(s_path):
         s_pc = np.load(s_path / s_file)
+        idx = np.random.randint(s_pc.shape[0], size=2048)
+        s_pc = s_pc[idx, :]
         samples_pcs.append(s_pc)
     samples_pcs = np.asarray(samples_pcs)
 
     results = {}
     out_folder = Path(args.out_folder)
-    pw_cd = _pairwise_cd(samples_pcs, gt_pcs, batch_size=1)
+    pw_cd = _pairwise_cd(samples_pcs, gt_pcs, batch_size=16)
     res_cd = lgan_mmd_cov(pw_cd.t())
     results.update({"%s-CD" % k: v for k, v in res_cd.items()})
     results = {k: (v.cpu().detach().item() if not isinstance(v, float) else v) for k, v in results.items()}
 
+    out_folder.mkdir(exist_ok=True, parents=True)
     out_metrics_path = out_folder / f"{synsetId}-metrics.json"
-
     with open(out_metrics_path, 'w') as fp:
         json.dump(results, fp)
 
