@@ -1,21 +1,13 @@
 # Code adapted from: https://git.io/Jfeua
 import argparse
 import json
-from collections import defaultdict
 from pathlib import Path
-from typing import Tuple, Union
 
 import numpy as np
 import torch
 import tqdm
-import pandas as pd
 import os
 
-import trimesh
-
-from ucsgnet.common import Evaluation3D
-from ucsgnet.flows.shapenet.net_flow3d_cat import FlowNet3d
-from ucsgnet.flows.shapenet.reconstruct_3d_shapes import VoxelReconstructor
 from ucsgnet.generators.generate_edge_data_from_point import get_points, to_tensor
 
 
@@ -139,100 +131,6 @@ def main():
     out_metrics_path = out_folder / f"{synsetId}-metrics.json"
     with open(out_metrics_path, 'w') as fp:
         json.dump(results, fp)
-
-    # out_per_obj = defaultdict(dict)
-    # category_chamfer_distance_sum = defaultdict(float)
-    # category_normal_consistency_sum = defaultdict(float)
-    #
-    # edge_category_chamfer_distance_sum = defaultdict(float)
-    # edge_category_normal_consistency_sum = defaultdict(float)
-    #
-    # category_count = defaultdict(int)
-    # mean_metrics = defaultdict(float)
-    # total_entries = 0
-    #
-    # out_folder = Path(args.out_folder)
-    # out_folder.mkdir(exist_ok=True, parents=True)
-    # errors = []
-    #
-    # with open(os.path.join("data", "shapenet", "taxonomy.json")) as json_f:
-    #     taxonomy = json.loads(json_f.read())
-    #
-    # cat_index_mapper = {}
-    # cat_name_mapper = {}
-    # index_cat_mapper = {}
-    # counter = 0
-    # for s_object in taxonomy:
-    #     cat_index_mapper[s_object["synsetId"]] = counter
-    #     cat_name_mapper[s_object["synsetId"]] = s_object["name"]
-    #     index_cat_mapper[counter] = s_object["name"]
-    #     counter += 1
-    #
-    # c_df = pd.read_csv(os.path.join("data", "shapenet_cat_embeddings", "validation_c.csv"))
-    # mapping_key_i = {key: i for i, key in enumerate(c_df["0"].unique())}
-    # mapping_i_key = {i: key for i, key in enumerate(c_df["0"].unique())}
-    # num_classes = len(mapping_key_i)
-    #
-    # results = {}
-    #
-    # gt_pointclouds = {}
-    # pred_pointclouds = {}
-    # for cat_id in Evaluation3D.CATEGORY_IDS[:1]:
-    #     gt_pointclouds[cat_id] = {}
-    #     gt_pointclouds[cat_id][VERT_KEY] = []
-    #     gt_pointclouds[cat_id][NORM_KEY] = []
-    #     for instance in tqdm.tqdm(eval_categories[cat_id]):
-    #         gt_file = (ground_truth_point_surface / cat_id / instance).with_suffix(
-    #             ".ply"
-    #         )
-    #         gt_pc_vertices, gt_pc_normals = read_point_normal_ply_file(gt_file.as_posix())
-    #         gt_pointclouds[cat_id][VERT_KEY].append(gt_pc_vertices)
-    #         gt_pointclouds[cat_id][NORM_KEY].append(gt_pc_normals)
-    #
-    #     number_refs = len(gt_pointclouds[cat_id][VERT_KEY])
-    #     pred_pointclouds[cat_id] = {}
-    #     pred_pointclouds[cat_id][VERT_KEY] = []
-    #     pred_pointclouds[cat_id][NORM_KEY] = []
-    #     context = torch.zeros((1, num_classes))
-    #     cat_index = Evaluation3D.CATEGORY_IDS.index(cat_id)
-    #     context[0, cat_index] = 1.0
-    #
-    #     with torch.no_grad():
-    #         for _ in tqdm.tqdm(range(2)):
-    #             try:
-    #                 samples = flow.model.sample(1, context=context).squeeze(0)
-    #                 (
-    #                     pred_reconstsructions,
-    #                     points_normals,
-    #                     csg_paths,
-    #                 ) = reconstructor.reconstruct_single_sampled_without_voxels(samples)
-    #
-    #                 pc_vert, pc_normals = points_normals[0][:, :3], points_normals[0][:, 3:]
-    #                 pred_pointclouds[cat_id][VERT_KEY].append(pc_vert)
-    #                 pred_pointclouds[cat_id][NORM_KEY].append(pc_normals)
-    #
-    #                 pred_vertices, pred_triangles = pred_reconstsructions[0]
-    #                 o3dvert = o3d.utility.Vector3dVector(np.asarray(pred_vertices))
-    #                 o3triangle = o3d.utility.Vector3iVector(np.asarray(pred_triangles))
-    #                 o3mesh = o3d.geometry.TriangleMesh(vertices=o3dvert, triangles=o3triangle)
-    #                 o3pcd = o3mesh.sample_points_uniformly(number_of_points=15000)
-    #                 pass
-    #             except ZeroDivisionError:
-    #                 continue
-    #     pw_cd = _pairwise_cd(
-    #         pred_pointclouds[cat_id][VERT_KEY],
-    #         gt_pointclouds[cat_id][VERT_KEY],
-    #         batch_size=8
-    #     )
-    #
-    #     res_cd = lgan_mmd_cov(pw_cd.t())
-    #     results.update({"%s-CD" % k: v for k, v in res_cd.items()})
-    #     results = {k: (v.cpu().detach().item() if not isinstance(v, float) else v) for k, v in results.items()}
-    #
-    #     out_metrics_path = out_folder / f"{cat_id}-metrics.json"
-    #
-    #     with open(out_metrics_path, 'w') as fp:
-    #         json.dump(results, fp)
 
 
 def get_args():

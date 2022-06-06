@@ -6,7 +6,7 @@ import seaborn as sns
 import umap
 import numpy as np
 import tqdm
-from ucsgnet.flows.shapenet.net_flow3d_cat import FlowNet3dMAF
+from ucsgnet.flows.shapenet.net_flow3d_cat import FlowNet3d
 from sklearn.manifold import TSNE
 
 
@@ -48,6 +48,7 @@ def save_plots(embeddings, categories, path):
         legend='full',
     )
     plt.axis("off")
+    plt.legend(fontsize=20)
     plt.tight_layout()
     plt.savefig(path, dpi=150)
 
@@ -96,7 +97,7 @@ def run_tsne(codes, samples, categories, split_type, OUT_DIR):
 
 
 def vis_embeddings(args):
-    flow = FlowNet3dMAF.load_from_checkpoint(args.flow_path)
+    flow = FlowNet3d.load_from_checkpoint(args.flow_path)
     flow.build(args.data_path)
     flow.hparams.batch_size = 8
     flow = flow.eval()
@@ -115,7 +116,7 @@ def vis_embeddings(args):
     run_umap(val_codes, val_samples, val_categories, "val", OUT_DIR)
 
     # run_tsne(train_codes, train_samples, train_categories, "train")
-    run_tsne(val_codes, val_samples, val_categories, "val", OUT_DIR)
+    # run_tsne(val_codes, val_samples, val_categories, "val", OUT_DIR)
 
 
 if __name__ == "__main__":

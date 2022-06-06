@@ -10,7 +10,7 @@ import json
 import torch
 from tqdm import tqdm
 
-from ucsgnet.flows.shapenet.net_flow3d_cat import FlowNet3d
+from ucsgnet.flows.shapenet.net_flow3d_cat import FlowNet3dMAF
 from ucsgnet.flows.shapenet.reconstruct_3d_shapes import VoxelReconstructor
 import argparse
 import json
@@ -86,7 +86,7 @@ def get_args() -> argparse.Namespace:
         help="Whether use the resolution 64 only instead of whole training",
     )
 
-    parser = FlowNet3d.add_model_specific_args(parser)
+    parser = FlowNet3dMAF.add_model_specific_args(parser)
     args = parser.parse_args()
     return args
 
@@ -109,9 +109,9 @@ def generate_edges(
 def main():
     args = get_args()
 
-    out_dir = Path("data") / "3d_shapenet_cat_renders_v2"
+    out_dir = Path("data") / "3d_shapenet_cat_renders_maf"
 
-    flow = FlowNet3d.load_from_checkpoint(args.flow_path)
+    flow = FlowNet3dMAF.load_from_checkpoint(args.flow_path)
     flow = flow.eval()
 
     with open(
@@ -143,7 +143,7 @@ def main():
     num_classes = len(mapping_key_i)
 
     num_instances = 3
-    for class_index in tqdm(range(1), desc="Classes"):
+    for class_index in tqdm(range(num_classes), desc="Classes"):
         for model_index in tqdm(range(num_instances), desc="Instances"):
             original_index = mapping_i_key[class_index]
             class_name = index_cat_mapper[original_index]

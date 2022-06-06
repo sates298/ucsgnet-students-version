@@ -3,7 +3,7 @@ import torch
 import tqdm
 
 from ucsgnet.common import Evaluation3D
-from ucsgnet.flows.shapenet.net_flow3d_cat import FlowNet3dMAF
+from ucsgnet.flows.shapenet.net_flow3d_cat import FlowNet3d
 from ucsgnet.flows.shapenet.reconstruct_3d_shapes import VoxelReconstructor
 import argparse
 import json
@@ -75,7 +75,7 @@ def get_args() -> argparse.Namespace:
         required=True
     )
 
-    parser = FlowNet3dMAF.add_model_specific_args(parser)
+    parser = FlowNet3d.add_model_specific_args(parser)
     args = parser.parse_args()
     return args
 
@@ -85,7 +85,7 @@ def main():
 
     out_dir = Path("data") / args.out_folder
 
-    flow = FlowNet3dMAF.load_from_checkpoint(args.flow_path)
+    flow = FlowNet3d.load_from_checkpoint(args.flow_path)
     flow = flow.eval()
     model = flow.net
     model.turn_fine_tuning_mode()
