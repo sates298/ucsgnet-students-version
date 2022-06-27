@@ -1,6 +1,7 @@
 # ucsgnet-students-version
 
 Bilski Kajetan, Chodukiewicz Maciej, Marciniak Michał, Woźniak Stanisław
+
 Opiekun: [dr hab. inż. Maciej Zięba](https://scholar.google.com/citations?user=XmOBJZYAAAAJ&hl=en")
 
 Repozytorium zawiera implementacje stworzeone przez studentów Politechniki Wrocławskiej w ramach projektu naukowo - wdrożeniowego. Tematem projektu było usprawnianie modeli generujących drzewa CSG. Drzewa CSG opisują w jaki sposób złożone kształty mogą zostać stworzone przez składanie prostych figur geometrycznych (prymitywów). Wszystkie zaimplementowane modele są oparte na [UCSG-Net](https://github.com/kacperkan/ucsgnet).
