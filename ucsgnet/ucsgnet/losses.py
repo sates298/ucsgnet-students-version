@@ -74,10 +74,10 @@ def get_composite_loss(
     out = {"rec": recon_loss}
     total_loss += recon_loss
 
-    if scaler.m.item() <= 0.05:
-        temp = 1e-1 * get_temperature_decreasing_loss(csg_layers)
-        out["temp"] = temp
-        total_loss += temp
+    # if scaler.m.item() <= 0.05:
+    #     temp = 1e-1 * get_temperature_decreasing_loss(csg_layers)
+    #     out["temp"] = temp
+    #     total_loss += temp
 
     scaling_loss = 1e-1 * get_scaling_loss(scaler)
     out["scale"] = scaling_loss

@@ -7,25 +7,25 @@ from ucsgnet.common import FLOAT_EPS, RNN_LATENT_SIZE, TrainingStage
 
 
 def parametrized_clipping_function(
-    x: torch.Tensor,
-    m: torch.Tensor,
-    min_value: float = 0,
-    max_value: float = 1,
+        x: torch.Tensor,
+        m: torch.Tensor,
+        min_value: float = 0,
+        max_value: float = 1,
 ) -> torch.Tensor:
     return (x / m.clamp_min(FLOAT_EPS)).clamp(min_value, max_value)
 
 
 def gumbel_softmax(
-    probabilities: torch.Tensor,
-    temperature: t.Union[torch.Tensor, float],
-    dim: int,
+        probabilities: torch.Tensor,
+        temperature: t.Union[torch.Tensor, float],
+        dim: int,
 ) -> torch.Tensor:
     samples = torch.rand_like(probabilities).clamp_min(FLOAT_EPS)
     samples = -torch.log(-torch.log(samples))
     if isinstance(temperature, torch.Tensor):
         temperature = temperature.clamp_min(1e-3)
     return (
-        ((probabilities + FLOAT_EPS).log() + samples) / temperature
+            ((probabilities + FLOAT_EPS).log() + samples) / temperature
     ).softmax(dim=dim)
 
 
@@ -52,11 +52,11 @@ class Scaler(nn.Module):
 
 class RelationLayer(nn.Module):
     def __init__(
-        self,
-        num_in_shapes: int,
-        num_out_shapes: int,
-        binarizing_threshold: float,
-        latent_size: int,
+            self,
+            num_in_shapes: int,
+            num_out_shapes: int,
+            binarizing_threshold: float,
+            latent_size: int,
     ):
         super().__init__()
 
@@ -100,29 +100,31 @@ class RelationLayer(nn.Module):
         )
 
     def forward(
-        self, x: torch.Tensor, latent_vector: torch.Tensor
+            self, x: torch.Tensor, latent_vector: torch.Tensor
     ) -> torch.Tensor:
         """
         x -> batch, num_points, num_shapes
+        latent -> batch, latent_shape
         """
         batch_size = x.shape[0]
         mask_l = (
-            (
                 latent_vector[:, :, None, None]
                 * self.composition_vector_1_[None]
-            )
-            .sum(dim=1)
+        )  # (batch_size, latent_size, num_input_shapes, num_output_shapes)
+        mask_l = mask_l\
+            .sum(dim=1) \
             .softmax(dim=-2)
-        )
+        # # (batch_size, num_input_shapes, num_output_shapes)
         mask_r = (
             (
-                latent_vector[:, :, None, None]
-                * self.composition_vector_2_[None]
+                    latent_vector[:, :, None, None]
+                    * self.composition_vector_2_[None]
             )
-            .sum(dim=1)
-            .softmax(dim=-2)
+                .sum(dim=1)
+                .softmax(dim=-2)
         )
         mask = torch.stack([mask_l, mask_r], dim=1).unsqueeze(dim=2)
+        # (batch, 2, 1, num_in_shapes, num_out_shapes)
 
         self.left_op_mask = mask_l
         self.right_op_mask = mask_r
@@ -131,16 +133,17 @@ class RelationLayer(nn.Module):
         self.last_mask = mask
         mask = gumbel_softmax(
             mask, self.temperature_.clamp(FLOAT_EPS, 2), dim=-2
-        )
+        ) # (batch, 2, 1, in_shapes, out_shapes)
         self.last_sampled_shapes = mask
         per_head_mask = mask.split(split_size=1, dim=1)
-        x = x.unsqueeze(-1)
+        x = x.unsqueeze(-1)  # (batch, points, in_shapes, 1)
 
         partial_res = []
         for head in per_head_mask:  # type: torch.Tensor
-            head = head.squeeze(dim=1)
-            partial_res.append((x * head).sum(dim=2))
-        x = torch.stack(partial_res, dim=2)
+            head = head.squeeze(dim=1) # (batch, 1, in_shapes, out_shapes)
+            head_x = x * head # (batch, points, in_shapes, out_shapes)
+            partial_res.append(head_x.sum(dim=2))
+        x = torch.stack(partial_res, dim=2)  # batch, points, 2, 2
         x = torch.cat(
             [
                 x[:, :, 0] + x[:, :, 1],  # union
@@ -150,8 +153,8 @@ class RelationLayer(nn.Module):
             ],
             dim=-1,
         )
-        self.operations_before_clamping = x
-        x = x.clamp(0, 1)
+        self.operations_before_clamping = x  # batch, points, output_shapes * 4
+        x = x.clamp(0, 1)  # 16, 4096, 8
         self.operations_after_clamping = x
         return x
 
@@ -164,5 +167,5 @@ class RelationLayer(nn.Module):
     def switch_mode(self, new_mode: TrainingStage):
         self._base_mode = new_mode
         self.temperature_.requires_grad = (
-            new_mode == TrainingStage.INITIAL_TRAINING
+                new_mode == TrainingStage.INITIAL_TRAINING
         )

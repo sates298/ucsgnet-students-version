@@ -8,8 +8,8 @@ from pytorch_lightning import Trainer
 
 from ucsgnet.callbacks import ModelCheckpoint
 from ucsgnet.loggers import TensorBoardLogger
-from ucsgnet.ucsgnet.net_2d import Net
-
+# from ucsgnet.ucsgnet.net_2d import Net
+from ucsgnet.ucsgnet.set_transformer.net_2d import Net
 MAX_NB_EPOCHS = 251
 
 
