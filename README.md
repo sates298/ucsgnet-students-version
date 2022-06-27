@@ -24,3 +24,5 @@ Schemat przedstawiający architekturę rozszerzonego modelu.
 ![wygenerowane próbki](images/generated.png)
 
 Przykładowe wygenerowane obiekty dla różnych wersji bazowego modelu.
+
+Szczegóły są opisane w [raporcie](docs/GenWro_raport.pdf).
